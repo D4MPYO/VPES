@@ -96,7 +96,7 @@ function addBackToHomeButton() {
             backBtn.style.cssText = 'position: absolute; top: 20px; left: 20px; z-index: 1000;';
             
             backBtn.addEventListener('click', () => {
-                window.location.href = './home.html'; // or './home.html' depending on your setup
+                window.location.href = './index.html'; // or './index.html' depending on your setup
             });
             
             container.appendChild(backBtn);
@@ -104,7 +104,7 @@ function addBackToHomeButton() {
     } else {
         // Add event listener if button already exists
         backToHomeBtn.addEventListener('click', () => {
-            window.location.href = './home.html';
+            window.location.href = './index.html';
         });
     }
 }
@@ -197,7 +197,7 @@ loginForm.addEventListener('submit', async (e) => {
         
         // Redirect to home with success parameter
         setTimeout(() => {
-            window.location.href = './home.html?success=login';
+            window.location.href = './index.html?success=login';
         }, 300);
 
     } catch (error) {
@@ -434,7 +434,7 @@ function showInstructionScreen(userEmail = '') {
     if (backToHomeFromInstruction) {
         backToHomeFromInstruction.addEventListener('click', () => {
             console.log('Back to Home from instruction clicked');
-            window.location.href = './home.html';
+            window.location.href = './index.html';
         });
         
         // Add hover effect
@@ -481,7 +481,7 @@ otpForm.addEventListener('submit', async (e) => {
             showSuccess('Email verified successfully! Welcome to VPES!');
             
             setTimeout(() => {
-                window.location.href = './home.html?success=verification';
+                window.location.href = './index.html?success=verification';
             }, 300);
         } else {
             showError('Email verification failed. Please check your email and try again.');
@@ -549,7 +549,7 @@ document.getElementById('googleSignIn').addEventListener('click', async () => {
         
         // Redirect to home with success parameter
         setTimeout(() => {
-            window.location.href = './home.html?success=login';
+            window.location.href = './index.html?success=login';
         }, 300);
 
     } catch (error) {

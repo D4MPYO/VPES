@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPES SIMS - Online Admission System</title>
+  <link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <div class="prototype-container">
+    <div class="wireframe-section">
+      <div class="wireframe" data-screen="Home Page">
+        <div class="nav-bar">
+          <div class="logo">🏫 VPES SIMS</div>
+          <div class="nav-links">
+            <a href="#" class="nav-link">Home</a>
+            <a href="#" class="nav-link">About</a>
+            <a href="#" class="nav-link">Requirements</a>
+            <a href="#" class="nav-link">Contact</a>
+            
+            <!-- Guest Navigation (shown when not logged in) -->
+            <div id="guestNavigation" class="guest-nav">
+              <a href="./login.html?mode=login" id="loginBtn" class="nav-link">Login</a>
+              <a href="./login.html?mode=signup" id="enrollBtn" class="nav-link primary">Enroll Now</a>
+            </div>
+
+            <!-- Authenticated Navigation (shown when logged in) -->
+            <div id="authenticatedNavigation" class="auth-nav" style="display: none;">
+              <div id="userProfile" class="user-profile">
+                <span class="user-info">
+                  <span id="userName">User</span>
+                  <span id="userEmail" class="user-email">user@email.com</span>
+                </span>
+              </div>
+              <button id="logoutBtn" class="nav-link danger">Logout</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Welcome Message (changes based on auth status) -->
+        <div class="hero">
+          <div id="welcomeMessage">
+            <h2>Welcome to VPES Online Admission</h2>
+            <p>Apply for admission to Vinzons Pilot Elementary School online - fast, convenient, and secure!</p>
+          </div>
+          
+          <!-- Guest Action Buttons -->
+          <div id="guestActions" class="guest-actions">
+            <button class="button primary" onclick="window.location.href='./login.html?mode=signup'">🚀 Start Application</button>
+            <button class="button secondary">📋 Check Requirements</button>
+          </div>
+
+          <!-- Authenticated Action Buttons -->
+          <div id="authenticatedActions" class="auth-actions" style="display: none;">
+            <button class="button primary">🚀 Continue Application</button>
+            <button class="button secondary">📊 View Dashboard</button>
+            <button class="button secondary">📋 My Documents</button>
+          </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="features-grid">
+          <div class="dashboard-card">
+            <h3>✨ Easy Application</h3>
+            <p>Fill out forms online anytime, anywhere</p>
+          </div>
+          <div class="dashboard-card">
+            <h3>📱 Track Status</h3>
+            <p>Monitor your application progress in real-time</p>
+          </div>
+          <div class="dashboard-card">
+            <h3>📄 Upload Documents</h3>
+            <p>Submit required documents digitally</p>
+          </div>
+        </div>
+
+        <!-- Enrollment Prompts for Guests -->
+        <div class="enroll-prompt" id="enrollmentPromo" style="display: none;">
+          <!-- Content will be dynamically inserted by JavaScript -->
+        </div>
+
+        <!-- Auth-required content (only visible to logged-in users) -->
+        <div class="auth-required" id="authenticatedContent" style="display: none;">
+          <div class="dashboard-section">
+            <h3>Your Application Status</h3>
+            <div class="status-card">
+              <p>Application in progress...</p>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 60%"></div>
+              </div>
+              <small>60% Complete</small>
+            </div>
+          </div>
+
+          <div class="dashboard-section">
+            <h3>Quick Actions</h3>
+            <div class="quick-actions">
+              <button class="button secondary">📝 Edit Application</button>
+              <button class="button secondary">📎 Upload Documents</button>
+              <button class="button secondary">📧 Contact Admissions</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification areas -->
+  <div id="loading" class="loading-overlay" style="display: none;"></div>
+  <div id="errorMessage" class="notification error" style="display: none;"></div>
+  <div id="successMessage" class="notification success" style="display: none;"></div>
+
+  <script type="module" src="home.js"></script>
+</body>
+</html>
+
