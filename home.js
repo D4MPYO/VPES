@@ -233,6 +233,24 @@ function addEventListeners() {
             }
         });
     }
+
+    // Start Application button logic
+const startApplicationBtn = document.getElementById('startApplicationBtn');
+if (startApplicationBtn) {
+    startApplicationBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            // 🚨 No user logged in → redirect to login
+            window.location.href = './login.html?mode=login';
+        } else if (currentUser && !currentUser.emailVerified) {
+            // 📧 User logged in but not verified
+            showError('Please verify your email before starting the application.');
+        } else {
+            // ✅ User logged in & verified → go to application form
+            window.location.href = './applicationform.html';
+        }
+    });
+}
+
     
     // Add hover effects to navigation buttons
     addHoverEffects();
