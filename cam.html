@@ -680,186 +680,766 @@
         </div>
     </div>
 
-    <script>
-        class DocumentScanner {
+   <script>
+    // Real Document Scanner with OpenCV.js
+class DocumentScanner {
     constructor() {
-        this.currentUploadTarget = null;
         this.currentStream = null;
-        this.scannedCanvas = null;
-        this.uploadedFiles = new Map();
-        this.isOpenCVReady = false;
+        this.currentUploadTarget = null;
+        this.capturedImageData = null;
+        this.opencv = null;
+        this.isProcessing = false;
+        this.documentDetected = false;
+        this.detectedCorners = null;
+        this.processingCanvas = null;
+        this.processingCtx = null;
+        this.animationId = null;
+        
         this.init();
     }
 
-    init() {
-        this.loadOpenCV();
+    async init() {
+        this.detectDevice();
         this.setupEventListeners();
-        this.checkMobileDevice();
+        this.setupDragAndDrop();
+        await this.loadOpenCV();
     }
 
-    loadOpenCV() {
-        // Wait for OpenCV to load
-        if (typeof cv !== 'undefined') {
-            this.isOpenCVReady = true;
-        } else {
-            // Poll for OpenCV availability
-            const checkOpenCV = setInterval(() => {
-                if (typeof cv !== 'undefined') {
-                    this.isOpenCVReady = true;
-                    clearInterval(checkOpenCV);
-                    console.log('OpenCV.js is ready');
+    // Load OpenCV.js
+    async loadOpenCV() {
+        return new Promise((resolve, reject) => {
+            if (window.cv) {
+                this.opencv = window.cv;
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/opencv.js/4.8.0/opencv.js';
+            script.onload = () => {
+                if (window.cv && window.cv.imread) {
+                    this.opencv = window.cv;
+                    console.log('OpenCV.js loaded successfully');
+                    resolve();
+                } else {
+                    // Wait for OpenCV to initialize
+                    window.onOpenCVReady = () => {
+                        this.opencv = window.cv;
+                        console.log('OpenCV.js initialized successfully');
+                        resolve();
+                    };
                 }
-            }, 100);
-        }
+            };
+            script.onerror = () => {
+                console.error('Failed to load OpenCV.js');
+                reject(new Error('Failed to load OpenCV.js'));
+            };
+            document.head.appendChild(script);
+        });
     }
 
-    checkMobileDevice() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                        window.innerWidth <= 768;
-        if (isMobile) {
-            document.querySelectorAll('.btn-camera').forEach(btn => {
-                btn.style.display = 'flex';
-            });
-        }
+    // Detect if device is mobile
+    detectDevice() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                         (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        
+        const cameraButtons = document.querySelectorAll('.btn-camera');
+        cameraButtons.forEach(btn => {
+            btn.style.display = isMobile ? 'flex' : 'none';
+        });
     }
 
     setupEventListeners() {
-        // File input change events
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.addEventListener('change', (e) => this.handleFileSelect(e));
+        // File input buttons
+        document.querySelectorAll('.btn-file').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const uploadArea = e.target.closest('.upload-area');
+                const fileInput = uploadArea.querySelector('.file-input');
+                fileInput.click();
+            });
         });
 
-        // Upload area events
-        document.querySelectorAll('.upload-area').forEach(area => {
-            const fileInput = area.querySelector('.file-input');
-            const fileBtn = area.querySelector('.btn-file');
-            const cameraBtn = area.querySelector('.btn-camera');
+        // Camera buttons
+        document.querySelectorAll('.btn-camera').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const uploadArea = e.target.closest('.upload-area');
+                const target = uploadArea.dataset.upload;
+                this.openCamera(target);
+            });
+        });
 
-            fileBtn?.addEventListener('click', () => fileInput.click());
-            
-            cameraBtn?.addEventListener('click', () => {
-                this.currentUploadTarget = area.dataset.upload;
-                this.openCamera();
+        // File inputs
+        document.querySelectorAll('.file-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                this.handleFileSelect(e);
+            });
+        });
+
+        // Remove buttons
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.removeFile(e);
+            });
+        });
+
+        // Camera modal controls
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            this.captureDocument();
+        });
+
+        document.getElementById('useScanBtn').addEventListener('click', () => {
+            this.useCapturedDocument();
+        });
+
+        document.getElementById('retakeBtn').addEventListener('click', () => {
+            this.retakeDocument();
+        });
+
+        document.getElementById('closeCameraBtn').addEventListener('click', () => {
+            this.closeCamera();
+        });
+    }
+
+    setupDragAndDrop() {
+        document.querySelectorAll('.upload-area').forEach(area => {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
             });
 
-            // Drag and drop
-            area.addEventListener('dragover', (e) => this.handleDragOver(e));
-            area.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-            area.addEventListener('drop', (e) => this.handleDrop(e));
-            area.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('upload-btn')) {
-                    fileInput.click();
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const target = area.dataset.upload;
+                    this.processFile(files[0], target);
                 }
             });
         });
-
-        // Remove button events
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.removeFile(e));
-        });
-
-        // Camera modal events
-        document.getElementById('captureBtn')?.addEventListener('click', () => this.captureDocument());
-        document.getElementById('useScanBtn')?.addEventListener('click', () => this.acceptScan());
-        document.getElementById('retakeBtn')?.addEventListener('click', () => this.retakeScan());
-        document.getElementById('closeCameraBtn')?.addEventListener('click', () => this.closeCamera());
     }
 
-    handleDragOver(e) {
-        e.preventDefault();
-        e.currentTarget.classList.add('dragover');
-    }
-
-    handleDragLeave(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const uploadTarget = e.currentTarget.dataset.upload;
-            this.processFile(files[0], uploadTarget);
+    async openCamera(target) {
+        if (!this.opencv) {
+            alert('Document scanner is still loading. Please wait a moment and try again.');
+            return;
         }
+
+        this.currentUploadTarget = target;
+        const modal = document.getElementById('cameraModal');
+        const video = document.getElementById('cameraVideo');
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            });
+            
+            this.currentStream = stream;
+            video.srcObject = stream;
+            modal.style.display = 'flex';
+            
+            this.resetModalState();
+            this.setupDocumentDetection(video);
+            
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Unable to access camera. Please use file upload instead.');
+        }
+    }
+
+    setupDocumentDetection(video) {
+        // Create processing canvas
+        this.processingCanvas = document.createElement('canvas');
+        this.processingCtx = this.processingCanvas.getContext('2d');
+        
+        // Create overlay for drawing detection results
+        this.createDetectionOverlay();
+        
+        // Start real-time detection
+        video.addEventListener('loadedmetadata', () => {
+            this.processingCanvas.width = video.videoWidth;
+            this.processingCanvas.height = video.videoHeight;
+            this.startDocumentDetection(video);
+        });
+    }
+
+    createDetectionOverlay() {
+        const cameraPreview = document.querySelector('.camera-preview > div');
+        
+        // Remove existing overlay
+        const existingOverlay = cameraPreview.querySelector('.detection-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Create new overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'detection-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        `;
+        
+        // Create detection indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'detection-indicator';
+        indicator.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        `;
+        indicator.textContent = '📄 Position document in frame';
+        
+        overlay.appendChild(indicator);
+        cameraPreview.appendChild(overlay);
+    }
+
+    startDocumentDetection(video) {
+        const detectFrame = () => {
+            if (!video.videoWidth || !video.videoHeight || this.isProcessing) {
+                this.animationId = requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            this.isProcessing = true;
+            
+            try {
+                // Draw video frame to processing canvas
+                this.processingCtx.drawImage(video, 0, 0, this.processingCanvas.width, this.processingCanvas.height);
+                
+                // Detect document
+                const detected = this.detectDocument();
+                this.updateDetectionUI(detected);
+                
+            } catch (error) {
+                console.error('Detection error:', error);
+            }
+            
+            this.isProcessing = false;
+            
+            // Continue detection loop
+            if (this.currentStream) {
+                this.animationId = requestAnimationFrame(detectFrame);
+            }
+        };
+        
+        this.animationId = requestAnimationFrame(detectFrame);
+    }
+
+    detectDocument() {
+        try {
+            // Create OpenCV Mat from canvas
+            const src = this.opencv.imread(this.processingCanvas);
+            const gray = new this.opencv.Mat();
+            const blur = new this.opencv.Mat();
+            const edges = new this.opencv.Mat();
+            const contours = new this.opencv.MatVector();
+            const hierarchy = new this.opencv.Mat();
+
+            // Convert to grayscale
+            this.opencv.cvtColor(src, gray, this.opencv.COLOR_RGBA2GRAY);
+            
+            // Apply Gaussian blur
+            this.opencv.GaussianBlur(gray, blur, new this.opencv.Size(5, 5), 0);
+            
+            // Edge detection
+            this.opencv.Canny(blur, edges, 50, 150);
+            
+            // Find contours
+            this.opencv.findContours(edges, contours, hierarchy, this.opencv.RETR_EXTERNAL, this.opencv.CHAIN_APPROX_SIMPLE);
+            
+            let bestContour = null;
+            let maxArea = 0;
+            
+            // Find largest rectangular contour
+            for (let i = 0; i < contours.size(); i++) {
+                const contour = contours.get(i);
+                const area = this.opencv.contourArea(contour);
+                
+                // Skip small contours
+                if (area < 10000) continue;
+                
+                // Approximate contour to polygon
+                const epsilon = 0.02 * this.opencv.arcLength(contour, true);
+                const approx = new this.opencv.Mat();
+                this.opencv.approxPolyDP(contour, approx, epsilon, true);
+                
+                // Check if it's a quadrilateral (4 points) and has significant area
+                if (approx.rows === 4 && area > maxArea) {
+                    maxArea = area;
+                    if (bestContour) bestContour.delete();
+                    bestContour = approx.clone();
+                }
+                
+                approx.delete();
+                contour.delete();
+            }
+            
+            // Clean up
+            src.delete();
+            gray.delete();
+            blur.delete();
+            edges.delete();
+            contours.delete();
+            hierarchy.delete();
+            
+            if (bestContour) {
+                // Extract corner points
+                const corners = [];
+                for (let i = 0; i < 4; i++) {
+                    corners.push({
+                        x: bestContour.data32S[i * 2],
+                        y: bestContour.data32S[i * 2 + 1]
+                    });
+                }
+                
+                bestContour.delete();
+                
+                // Order corners (top-left, top-right, bottom-right, bottom-left)
+                this.detectedCorners = this.orderCorners(corners);
+                return true;
+            }
+            
+            this.detectedCorners = null;
+            return false;
+            
+        } catch (error) {
+            console.error('OpenCV detection error:', error);
+            return false;
+        }
+    }
+
+    orderCorners(corners) {
+        // Sort by y-coordinate
+        corners.sort((a, b) => a.y - b.y);
+        
+        // Top two points
+        const top = corners.slice(0, 2).sort((a, b) => a.x - b.x);
+        // Bottom two points
+        const bottom = corners.slice(2, 4).sort((a, b) => a.x - b.x);
+        
+        return [
+            top[0],    // top-left
+            top[1],    // top-right
+            bottom[1], // bottom-right
+            bottom[0]  // bottom-left
+        ];
+    }
+
+    updateDetectionUI(detected) {
+        const overlay = document.querySelector('.detection-overlay');
+        const indicator = overlay.querySelector('.detection-indicator');
+        const video = document.getElementById('cameraVideo');
+        const captureBtn = document.getElementById('captureBtn');
+        
+        if (detected && this.detectedCorners) {
+            // Update indicator
+            indicator.style.background = 'rgba(40, 167, 69, 0.9)';
+            indicator.innerHTML = '✅ Document Detected - Ready to Scan';
+            
+            // Enable capture button with visual feedback
+            captureBtn.style.background = '#28a745';
+            captureBtn.style.boxShadow = '0 0 20px rgba(40, 167, 69, 0.5)';
+            
+            // Draw detection outline
+            this.drawDetectionOutline(overlay, video);
+            
+            this.documentDetected = true;
+        } else {
+            // Update indicator
+            indicator.style.background = 'rgba(220, 53, 69, 0.9)';
+            indicator.innerHTML = '📄 Position document in frame';
+            
+            // Reset capture button
+            captureBtn.style.background = '#28a745';
+            captureBtn.style.boxShadow = 'none';
+            
+            // Clear detection outline
+            this.clearDetectionOutline(overlay);
+            
+            this.documentDetected = false;
+        }
+    }
+
+    drawDetectionOutline(overlay, video) {
+        if (!this.detectedCorners) return;
+        
+        // Remove existing outline
+        const existingOutline = overlay.querySelector('.document-outline');
+        if (existingOutline) {
+            existingOutline.remove();
+        }
+        
+        // Create SVG overlay
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.className = 'document-outline';
+        svg.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        `;
+        
+        // Calculate scaling factors
+        const videoRect = video.getBoundingClientRect();
+        const scaleX = videoRect.width / this.processingCanvas.width;
+        const scaleY = videoRect.height / this.processingCanvas.height;
+        
+        // Create polygon path
+        const points = this.detectedCorners.map(corner => 
+            `${corner.x * scaleX},${corner.y * scaleY}`
+        ).join(' ');
+        
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', points);
+        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('stroke', '#28a745');
+        polygon.setAttribute('stroke-width', '3');
+        polygon.setAttribute('stroke-dasharray', '10,5');
+        polygon.style.filter = 'drop-shadow(0 0 8px rgba(40, 167, 69, 0.8))';
+        
+        // Add corner markers
+        this.detectedCorners.forEach((corner, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', corner.x * scaleX);
+            circle.setAttribute('cy', corner.y * scaleY);
+            circle.setAttribute('r', '8');
+            circle.setAttribute('fill', '#28a745');
+            circle.setAttribute('stroke', 'white');
+            circle.setAttribute('stroke-width', '2');
+            circle.style.filter = 'drop-shadow(0 0 4px rgba(0, 0, 0, 0.5))';
+            svg.appendChild(circle);
+        });
+        
+        svg.appendChild(polygon);
+        overlay.appendChild(svg);
+    }
+
+    clearDetectionOutline(overlay) {
+        const outline = overlay.querySelector('.document-outline');
+        if (outline) {
+            outline.remove();
+        }
+    }
+
+    async captureDocument() {
+        const video = document.getElementById('cameraVideo');
+        const previewImage = document.getElementById('previewImage');
+        
+        // Create capture canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth || video.clientWidth;
+        canvas.height = video.videoHeight || video.clientHeight;
+        
+        // Capture current frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        let finalCanvas = canvas;
+        
+        // If document was detected, perform perspective correction
+        if (this.documentDetected && this.detectedCorners) {
+            finalCanvas = await this.perspectiveCorrection(canvas);
+        }
+        
+        // Convert to blob
+        finalCanvas.toBlob((blob) => {
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                previewImage.src = url;
+                previewImage.style.display = 'block';
+                this.capturedImageData = blob;
+                
+                this.showPreview();
+                
+                // Stop detection loop
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+            } else {
+                alert('Failed to capture image. Please try again.');
+            }
+        }, 'image/jpeg', 0.95);
+    }
+
+    async perspectiveCorrection(sourceCanvas) {
+        if (!this.detectedCorners || !this.opencv) {
+            return sourceCanvas;
+        }
+        
+        try {
+            const src = this.opencv.imread(sourceCanvas);
+            
+            // Define destination size (A4 ratio)
+            const dstWidth = 800;
+            const dstHeight = 1131; // A4 ratio
+            
+            // Source corners (detected)
+            const srcCorners = this.opencv.matFromArray(4, 1, this.opencv.CV_32FC2, [
+                this.detectedCorners[0].x, this.detectedCorners[0].y, // top-left
+                this.detectedCorners[1].x, this.detectedCorners[1].y, // top-right
+                this.detectedCorners[2].x, this.detectedCorners[2].y, // bottom-right
+                this.detectedCorners[3].x, this.detectedCorners[3].y  // bottom-left
+            ]);
+            
+            // Destination corners (rectangle)
+            const dstCorners = this.opencv.matFromArray(4, 1, this.opencv.CV_32FC2, [
+                0, 0,                    // top-left
+                dstWidth, 0,             // top-right
+                dstWidth, dstHeight,     // bottom-right
+                0, dstHeight             // bottom-left
+            ]);
+            
+            // Get perspective transform matrix
+            const M = this.opencv.getPerspectiveTransform(srcCorners, dstCorners);
+            
+            // Apply perspective transformation
+            const dst = new this.opencv.Mat();
+            this.opencv.warpPerspective(src, dst, M, new this.opencv.Size(dstWidth, dstHeight));
+            
+            // Convert back to canvas
+            const correctedCanvas = document.createElement('canvas');
+            correctedCanvas.width = dstWidth;
+            correctedCanvas.height = dstHeight;
+            this.opencv.imshow(correctedCanvas, dst);
+            
+            // Clean up
+            src.delete();
+            dst.delete();
+            srcCorners.delete();
+            dstCorners.delete();
+            M.delete();
+            
+            return correctedCanvas;
+            
+        } catch (error) {
+            console.error('Perspective correction error:', error);
+            return sourceCanvas;
+        }
+    }
+
+    showPreview() {
+        const video = document.getElementById('cameraVideo');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const captureBtn = document.getElementById('captureBtn');
+        const useScanBtn = document.getElementById('useScanBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const overlay = document.querySelector('.detection-overlay');
+
+        // Hide video and detection overlay
+        video.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+        
+        // Show preview
+        previewContainer.style.display = 'flex';
+        previewImage.style.display = 'block';
+        
+        // Update buttons
+        captureBtn.style.display = 'none';
+        useScanBtn.style.display = 'block';
+        retakeBtn.style.display = 'block';
+    }
+
+    resetModalState() {
+        const video = document.getElementById('cameraVideo');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const captureBtn = document.getElementById('captureBtn');
+        const useScanBtn = document.getElementById('useScanBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const overlay = document.querySelector('.detection-overlay');
+
+        // Show video, hide preview
+        video.style.display = 'block';
+        if (overlay) overlay.style.display = 'block';
+        previewContainer.style.display = 'none';
+        previewImage.style.display = 'none';
+        
+        // Reset buttons
+        captureBtn.style.display = 'block';
+        captureBtn.style.background = '#28a745';
+        captureBtn.style.boxShadow = 'none';
+        useScanBtn.style.display = 'none';
+        retakeBtn.style.display = 'none';
+        
+        // Reset detection state
+        this.documentDetected = false;
+        this.detectedCorners = null;
+    }
+
+    retakeDocument() {
+        this.resetModalState();
+        this.capturedImageData = null;
+        
+        // Clear preview image URL
+        const previewImage = document.getElementById('previewImage');
+        if (previewImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImage.src);
+        }
+        
+        // Restart detection
+        const video = document.getElementById('cameraVideo');
+        this.startDocumentDetection(video);
+    }
+
+    useCapturedDocument() {
+        if (this.capturedImageData && this.currentUploadTarget) {
+            const file = new File([this.capturedImageData], 'scanned-document.jpg', {
+                type: 'image/jpeg'
+            });
+            
+            this.processFile(file, this.currentUploadTarget, true);
+            this.closeCamera();
+        }
+    }
+
+    closeCamera() {
+        // Stop detection loop
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        // Stop camera stream
+        if (this.currentStream) {
+            this.currentStream.getTracks().forEach(track => track.stop());
+            this.currentStream = null;
+        }
+        
+        // Clear preview image URL
+        const previewImage = document.getElementById('previewImage');
+        if (previewImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImage.src);
+        }
+        
+        // Hide modal
+        document.getElementById('cameraModal').style.display = 'none';
+        this.currentUploadTarget = null;
+        this.capturedImageData = null;
+        this.documentDetected = false;
+        this.detectedCorners = null;
     }
 
     handleFileSelect(e) {
         const file = e.target.files[0];
-        const uploadTarget = e.target.dataset.target;
+        const target = e.target.dataset.target;
+        
         if (file) {
-            this.processFile(file, uploadTarget);
+            this.processFile(file, target);
         }
     }
 
-    processFile(file, target) {
-        if (!this.validateFile(file)) return;
+    processFile(file, target, isScanned = false) {
+        if (!this.validateFile(file)) {
+            return;
+        }
 
         this.showLoading(target);
         
         setTimeout(() => {
-            this.uploadedFiles.set(target, file);
-            this.showUploadedFile(file, target);
+            this.showUploadedFile(file, target, isScanned);
             this.hideLoading(target);
         }, 1500);
     }
 
     validateFile(file) {
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 5 * 1024 * 1024;
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-
+        
         if (file.size > maxSize) {
-            alert('File size must be less than 10MB');
+            alert('File size must be less than 5MB');
             return false;
         }
-
+        
         if (!allowedTypes.includes(file.type)) {
-            alert('Only PDF, JPG, and PNG files are allowed');
+            alert('Please upload a valid file format (PDF, JPG, PNG)');
             return false;
         }
-
+        
         return true;
     }
 
     showLoading(target) {
-        const loadingEl = document.querySelector(`[data-loading="${target}"]`);
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const loading = document.querySelector(`[data-loading="${target}"]`);
+        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
         
-        if (uploadArea) uploadArea.style.display = 'none';
-        if (loadingEl) loadingEl.style.display = 'block';
+        uploadArea.style.display = 'none';
+        uploadedFile.classList.remove('show');
+        loading.style.display = 'block';
     }
 
     hideLoading(target) {
-        const loadingEl = document.querySelector(`[data-loading="${target}"]`);
-        if (loadingEl) loadingEl.style.display = 'none';
+        const loading = document.querySelector(`[data-loading="${target}"]`);
+        loading.style.display = 'none';
     }
 
-    showUploadedFile(file, target) {
-        const uploadedEl = document.querySelector(`[data-file="${target}"]`);
-        if (!uploadedEl) return;
-
-        const fileNameEl = uploadedEl.querySelector('.file-name');
-        const fileSizeEl = uploadedEl.querySelector('.file-size');
-
-        if (fileNameEl) fileNameEl.textContent = `✅ ${file.name}`;
-        if (fileSizeEl) fileSizeEl.textContent = this.formatFileSize(file.size);
+    showUploadedFile(file, target, isScanned = false) {
+        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
+        const fileName = uploadedFile.querySelector('.file-name');
+        const fileSize = uploadedFile.querySelector('.file-size');
         
-        uploadedEl.classList.add('show');
+        fileName.textContent = `${fileName.textContent} ${file.name}${isScanned ? ' (AI Scanned)' : ''}`;
+        fileSize.textContent = this.formatFileSize(file.size);
+        
+        uploadArea.style.display = 'none';
+        uploadedFile.classList.add('show');
+        
+        uploadedFile.dataset.fileData = URL.createObjectURL(file);
+        uploadedFile.dataset.fileName = file.name;
+        uploadedFile.dataset.fileSize = file.size;
     }
 
     removeFile(e) {
-        const uploadedEl = e.target.closest('[data-file]');
-        const target = uploadedEl.dataset.file;
+        const uploadedFile = e.target.closest('.uploaded-file');
+        const target = uploadedFile.dataset.file;
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-
-        uploadedEl.classList.remove('show');
-        if (uploadArea) uploadArea.style.display = 'block';
+        const fileName = uploadedFile.querySelector('.file-name');
         
-        this.uploadedFiles.delete(target);
-
-        const fileInput = document.querySelector(`[data-target="${target}"]`);
-        if (fileInput) fileInput.value = '';
+        if (uploadedFile.dataset.fileData && uploadedFile.dataset.fileData.startsWith('blob:')) {
+            URL.revokeObjectURL(uploadedFile.dataset.fileData);
+        }
+        
+        const fileInput = uploadArea.querySelector('.file-input');
+        fileInput.value = '';
+        
+        uploadedFile.classList.remove('show');
+        uploadArea.style.display = 'block';
+        
+        const originalIcon = fileName.textContent.split(' ')[0];
+        fileName.textContent = originalIcon;
+        
+        delete uploadedFile.dataset.fileData;
+        delete uploadedFile.dataset.fileName;
+        delete uploadedFile.dataset.fileSize;
     }
 
     formatFileSize(bytes) {
@@ -870,465 +1450,83 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    async openCamera() {
-        try {
-            const modal = document.getElementById('cameraModal');
-            const video = document.getElementById('cameraVideo');
-            const overlay = document.getElementById('scanOverlay');
-
-            if (!modal || !video) {
-                alert('Camera modal elements not found');
-                return;
-            }
-
-            // Request camera with high resolution
-            this.currentStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 }
-                }
-            });
-
-            video.srcObject = this.currentStream;
-            modal.style.display = 'flex';
-
-            // Start document detection
-            video.onloadedmetadata = () => {
-                this.startDocumentDetection(video, overlay);
-            };
-
-        } catch (error) {
-            console.error('Camera error:', error);
-            alert('Unable to access camera. Please check permissions and try again.');
-        }
-    }
-
-    startDocumentDetection(video, overlay) {
-        if (!this.isOpenCVReady) {
-            console.log('OpenCV not ready, skipping document detection');
-            return;
-        }
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const detectDocuments = () => {
-            if (video.readyState === 4) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                try {
-                    const corners = this.detectDocumentCorners(canvas);
-                    this.drawDocumentOutline(overlay, corners, video);
-                } catch (e) {
-                    console.error('Document detection error:', e);
-                }
-            }
-            
-            // Continue detection if camera is still open
-            if (this.currentStream) {
-                requestAnimationFrame(detectDocuments);
-            }
-        };
-
-        detectDocuments();
-    }
-
-    detectDocumentCorners(canvas) {
-        const src = cv.imread(canvas);
-        const gray = new cv.Mat();
-        const blur = new cv.Mat();
-        const edges = new cv.Mat();
-        const contours = new cv.MatVector();
-        const hierarchy = new cv.Mat();
-
-        // Convert to grayscale
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        
-        // Apply Gaussian blur
-        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-        
-        // Detect edges using Canny
-        cv.Canny(blur, edges, 50, 150);
-        
-        // Find contours
-        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        let bestContour = null;
-        let maxArea = 0;
-        const minArea = canvas.width * canvas.height * 0.1; // At least 10% of image
-
-        // Find largest rectangular contour
-        for (let i = 0; i < contours.size(); i++) {
-            const contour = contours.get(i);
-            const area = cv.contourArea(contour);
-            
-            if (area > minArea && area > maxArea) {
-                const peri = cv.arcLength(contour, true);
-                const approx = new cv.Mat();
-                cv.approxPolyDP(contour, approx, 0.02 * peri, true);
-                
-                // Check if it's roughly rectangular (4 corners)
-                if (approx.rows === 4) {
-                    maxArea = area;
-                    bestContour = approx.clone();
-                }
-                approx.delete();
-            }
-            contour.delete();
-        }
-
-        // Clean up
-        src.delete();
-        gray.delete();
-        blur.delete();
-        edges.delete();
-        contours.delete();
-        hierarchy.delete();
-
-        // Convert contour points to screen coordinates
-        if (bestContour) {
-            const points = [];
-            for (let i = 0; i < bestContour.rows; i++) {
-                const point = {
-                    x: bestContour.intPtr(i, 0)[0],
-                    y: bestContour.intPtr(i, 0)[1]
-                };
-                points.push(point);
-            }
-            bestContour.delete();
-            return this.orderPoints(points);
-        }
-
-        return null;
-    }
-
-    orderPoints(points) {
-        // Order points as: top-left, top-right, bottom-right, bottom-left
-        if (points.length !== 4) return null;
-
-        const rect = new Array(4);
-        
-        // Sum and difference to find corners
-        const sums = points.map(p => p.x + p.y);
-        const diffs = points.map(p => p.x - p.y);
-        
-        rect[0] = points[sums.indexOf(Math.min(...sums))]; // top-left
-        rect[2] = points[sums.indexOf(Math.max(...sums))]; // bottom-right
-        rect[1] = points[diffs.indexOf(Math.max(...diffs))]; // top-right
-        rect[3] = points[diffs.indexOf(Math.min(...diffs))]; // bottom-left
-        
-        return rect;
-    }
-
-    drawDocumentOutline(overlay, corners, video) {
-        if (!overlay || !corners) {
-            if (overlay) overlay.innerHTML = '';
-            return;
-        }
-
-        const videoRect = video.getBoundingClientRect();
-        const scaleX = videoRect.width / video.videoWidth;
-        const scaleY = videoRect.height / video.videoHeight;
-
-        // Create SVG for drawing the outline
-        overlay.innerHTML = `
-            <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
-                <polygon 
-                    points="${corners.map(p => `${p.x * scaleX},${p.y * scaleY}`).join(' ')}"
-                    fill="rgba(0, 255, 0, 0.2)"
-                    stroke="#00ff00"
-                    stroke-width="3"
-                    stroke-dasharray="10,5"
-                />
-                ${corners.map((p, i) => `
-                    <circle 
-                        cx="${p.x * scaleX}" 
-                        cy="${p.y * scaleY}" 
-                        r="8" 
-                        fill="#00ff00" 
-                        stroke="#ffffff" 
-                        stroke-width="2"
-                    />
-                `).join('')}
-            </svg>
-            <div style="position: absolute; top: 20px; left: 20px; 
-                        background: rgba(0, 255, 0, 0.8); color: white; 
-                        padding: 8px 16px; border-radius: 20px; font-weight: bold;">
-                📄 Document Detected
-            </div>
-        `;
-    }
-
-    captureDocument() {
-        const video = document.getElementById('cameraVideo');
-        const captureBtn = document.getElementById('captureBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const scanOverlay = document.getElementById('scanOverlay');
-
-        if (!video || !captureBtn || !previewContainer || !previewImage) {
-            alert('Required elements not found');
-            return;
-        }
-
-        // Show processing state
-        captureBtn.textContent = '🔄 Scanning Document...';
-        captureBtn.disabled = true;
-
-        try {
-            // Create canvas for capture
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Apply document scanning and perspective correction
-            const scannedCanvas = this.processDocumentScan(canvas);
-            this.scannedCanvas = scannedCanvas;
-
-            // Show enhanced preview
-            const previewDataUrl = scannedCanvas.toDataURL('image/jpeg', 0.95);
-            previewImage.src = previewDataUrl;
-
-            // Update UI
-            video.classList.add('hide');
-            if (scanOverlay) scanOverlay.style.display = 'none';
-            previewContainer.classList.add('show');
-            this.updateCameraButtons();
-
-        } catch (error) {
-            console.error('Capture error:', error);
-            alert('Error scanning document. Please try again.');
-            this.resetCameraView();
-        }
-    }
-
-    processDocumentScan(canvas) {
-        if (!this.isOpenCVReady) {
-            // Fallback without OpenCV - simple enhancement
-            return this.enhanceImageSimple(canvas);
-        }
-
-        try {
-            // Use OpenCV for better document processing
-            const src = cv.imread(canvas);
-            const processed = this.perspectiveCorrection(src);
-            const enhanced = this.enhanceDocument(processed);
-            
-            // Create output canvas
-            const outputCanvas = document.createElement('canvas');
-            cv.imshow(outputCanvas, enhanced);
-            
-            // Clean up
-            src.delete();
-            processed.delete();
-            enhanced.delete();
-            
-            return outputCanvas;
-        } catch (error) {
-            console.error('OpenCV processing failed:', error);
-            return this.enhanceImageSimple(canvas);
-        }
-    }
-
-    perspectiveCorrection(src) {
-        // Detect document corners
-        const corners = this.detectDocumentCorners(document.createElement('canvas'));
-        
-        if (!corners) {
-            return src.clone(); // Return original if no document detected
-        }
-
-        // Define destination points (A4 aspect ratio)
-        const width = 595; // A4 width in points
-        const height = 842; // A4 height in points
-        
-        const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            corners[0].x, corners[0].y, // top-left
-            corners[1].x, corners[1].y, // top-right
-            corners[2].x, corners[2].y, // bottom-right
-            corners[3].x, corners[3].y  // bottom-left
-        ]);
-
-        const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            0, 0,          // top-left
-            width, 0,      // top-right
-            width, height, // bottom-right
-            0, height      // bottom-left
-        ]);
-
-        // Get perspective transform matrix
-        const transformMatrix = cv.getPerspectiveTransform(srcPoints, dstPoints);
-        
-        // Apply perspective correction
-        const corrected = new cv.Mat();
-        cv.warpPerspective(src, corrected, transformMatrix, new cv.Size(width, height));
-        
-        // Clean up
-        srcPoints.delete();
-        dstPoints.delete();
-        transformMatrix.delete();
-        
-        return corrected;
-    }
-
-    enhanceDocument(src) {
-        const enhanced = new cv.Mat();
-        const gray = new cv.Mat();
-        
-        // Convert to grayscale
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        
-        // Apply adaptive threshold for better text clarity
-        cv.adaptiveThreshold(gray, enhanced, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
-        
-        // Convert back to color
-        const result = new cv.Mat();
-        cv.cvtColor(enhanced, result, cv.COLOR_GRAY2RGBA);
-        
-        gray.delete();
-        enhanced.delete();
-        
-        return result;
-    }
-
-    enhanceImageSimple(canvas) {
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-
-        // Enhance contrast and brightness
-        for (let i = 0; i < data.length; i += 4) {
-            // Increase contrast
-            const contrast = 1.4;
-            const brightness = 10;
-            
-            data[i] = Math.max(0, Math.min(255, contrast * (data[i] - 128) + 128 + brightness));     // Red
-            data[i + 1] = Math.max(0, Math.min(255, contrast * (data[i + 1] - 128) + 128 + brightness)); // Green
-            data[i + 2] = Math.max(0, Math.min(255, contrast * (data[i + 2] - 128) + 128 + brightness)); // Blue
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        return canvas;
-    }
-
-    updateCameraButtons() {
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-
-        if (captureBtn) captureBtn.style.display = 'none';
-        if (useScanBtn) {
-            useScanBtn.style.display = 'inline-flex';
-            useScanBtn.textContent = '✅ Use This Scan';
-        }
-        if (retakeBtn) retakeBtn.style.display = 'inline-flex';
-    }
-
-    acceptScan() {
-        if (!this.scannedCanvas) {
-            alert('No scanned document available. Please try again.');
-            return;
-        }
-
-        this.scannedCanvas.toBlob((blob) => {
-            const fileName = `scanned_document_${Date.now()}.jpg`;
-            const file = new File([blob], fileName, { type: 'image/jpeg' });
-            
-            this.processFile(file, this.currentUploadTarget);
-            this.closeCamera();
-        }, 'image/jpeg', 0.95);
-    }
-
-    retakeScan() {
-        this.resetCameraView();
-    }
-
-    resetCameraView() {
-        const video = document.getElementById('cameraVideo');
-        const captureBtn = document.getElementById('captureBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const scanOverlay = document.getElementById('scanOverlay');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-
-        // Reset video view
-        if (video) video.classList.remove('hide');
-        if (scanOverlay) scanOverlay.style.display = 'block';
-        if (previewContainer) previewContainer.classList.remove('show');
-
-        // Reset buttons
-        if (captureBtn) {
-            captureBtn.style.display = 'inline-flex';
-            captureBtn.textContent = '📷 Scan Document';
-            captureBtn.disabled = false;
-        }
-        if (useScanBtn) useScanBtn.style.display = 'none';
-        if (retakeBtn) retakeBtn.style.display = 'none';
-
-        this.scannedCanvas = null;
-    }
-
-    closeCamera() {
-        const modal = document.getElementById('cameraModal');
-        
-        // Stop camera stream
-        if (this.currentStream) {
-            this.currentStream.getTracks().forEach(track => track.stop());
-            this.currentStream = null;
-        }
-
-        this.resetCameraView();
-        if (modal) modal.style.display = 'none';
-        
-        // Clear overlay
-        const overlay = document.getElementById('scanOverlay');
-        if (overlay) overlay.innerHTML = '';
-    }
-
-    // Public methods for external use
     getUploadedFiles() {
-        return Array.from(this.uploadedFiles.values());
+        const files = {};
+        document.querySelectorAll('.uploaded-file.show').forEach(element => {
+            const target = element.dataset.file;
+            files[target] = {
+                data: element.dataset.fileData,
+                name: element.dataset.fileName,
+                size: element.dataset.fileSize
+            };
+        });
+        return files;
     }
 
-    clearAllFiles() {
-        this.uploadedFiles.clear();
-        document.querySelectorAll('[data-file]').forEach(el => {
-            el.classList.remove('show');
-        });
-        document.querySelectorAll('[data-upload]').forEach(el => {
-            el.style.display = 'block';
-        });
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.value = '';
-        });
+    validateAllUploads() {
+        const requiredUploads = ['birth-cert', 'report-card', 'id-photo', 'moral-cert'];
+        const uploadedFiles = this.getUploadedFiles();
+        
+        const missing = requiredUploads.filter(req => !uploadedFiles[req]);
+        
+        if (missing.length > 0) {
+            const missingNames = {
+                'birth-cert': 'Birth Certificate',
+                'report-card': 'Report Card',
+                'id-photo': 'ID Photo',
+                'moral-cert': 'Good Moral Certificate'
+            };
+            
+            const missingList = missing.map(m => missingNames[m]).join(', ');
+            alert(`Please upload the following required documents: ${missingList}`);
+            return false;
+        }
+        
+        return true;
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Ensure OpenCV is loaded before initializing
-    const initScanner = () => {
-        if (typeof cv !== 'undefined') {
-            window.documentScanner = new DocumentScanner();
-            console.log('Document Scanner initialized');
-        } else {
-            setTimeout(initScanner, 100);
+// Initialize when DOM and OpenCV are ready
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        window.documentScanner = new DocumentScanner();
+        
+        // Update Review Application button
+        const reviewBtn = document.querySelector('.btn-primary');
+        if (reviewBtn) {
+            reviewBtn.addEventListener('click', (e) => {
+                if (!window.documentScanner.validateAllUploads()) {
+                    e.preventDefault();
+                    return false;
+                }
+                console.log('All documents uploaded successfully!');
+                console.log('Files:', window.documentScanner.getUploadedFiles());
+            });
         }
-    };
-    
-    initScanner();
+    } catch (error) {
+        console.error('Failed to initialize document scanner:', error);
+        alert('Document scanner failed to load. File upload will still work.');
+    }
 });
 
-// Export for module use if needed
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DocumentScanner;
-}
-    </script>
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (window.documentScanner) {
+        if (window.documentScanner.currentStream) {
+            window.documentScanner.currentStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (window.documentScanner.animationId) {
+            cancelAnimationFrame(window.documentScanner.animationId);
+        }
+        
+        document.querySelectorAll('.uploaded-file').forEach(element => {
+            if (element.dataset.fileData && element.dataset.fileData.startsWith('blob:')) {
+                URL.revokeObjectURL(element.dataset.fileData);
+            }
+        });
+    }
+});
+   </script>
 </body>
 </html>
