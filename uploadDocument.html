@@ -190,17 +190,8 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        .btn-file {
             background: #667eea;
             color: white;
-        }
-
-        .btn-camera {
-            background: #28a745;
-            color: white;
-            display: none;
         }
 
         .upload-btn:hover {
@@ -243,6 +234,13 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-details:hover {
+            color: #0056b3;
+            text-decoration: underline;
         }
 
         .file-name {
@@ -253,6 +251,26 @@
         .file-size {
             font-size: 0.9rem;
             color: #666;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .view-btn:hover {
+            background: #0056b3;
         }
 
         .remove-btn {
@@ -302,8 +320,8 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
-        /* Camera Modal */
-        .camera-modal {
+        /* Document View Modal */
+        .view-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -314,88 +332,78 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 20px;
         }
 
-        .camera-container {
+        .view-container {
             background: white;
             border-radius: 15px;
             padding: 20px;
-            max-width: 90vw;
-            max-height: 90vh;
+            width: 95vw;
+            height: 95vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
             gap: 20px;
-        }
-
-        .camera-preview {
-            position: relative;
-            max-width: 100%;
-            border-radius: 10px;
             overflow: hidden;
+        }
+
+        .view-header {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            gap: 15px;
-        }
-
-        .camera-video {
             width: 100%;
-            max-width: 500px;
-            height: auto;
-            max-height: 60vh;
-            border-radius: 10px;
-            border: 2px solid #667eea;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
         }
 
-        .preview-image {
-            width: 100%;
-            max-width: 500px;
-            height: auto;
-            max-height: 60vh;
-            border-radius: 10px;
-            border: 2px solid #28a745;
-            display: none;
+        .view-title {
+            color: #333;
+            margin: 0;
+            font-size: 1.2rem;
         }
 
-        .preview-container {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .preview-container.show {
-            display: flex;
-        }
-
-        .camera-video.hide {
-            display: none;
-        }
-
-        .camera-controls {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .camera-btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-capture {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-close {
+        .close-view-btn {
             background: #dc3545;
             color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .document-preview {
+            flex: 1;
+            width: 100%;
+            overflow: auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .document-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .pdf-preview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .preview-message {
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 40px 20px;
         }
 
         /* Responsive Design */
@@ -403,10 +411,6 @@
             .container {
                 padding: 20px;
                 margin: 10px;
-            }
-
-            .btn-camera {
-                display: flex;
             }
 
             .upload-buttons {
@@ -438,6 +442,28 @@
                 width: 200px;
                 justify-content: center;
             }
+
+            .file-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .file-actions {
+                align-self: stretch;
+                justify-content: center;
+            }
+
+            .view-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                padding: 15px;
+            }
+
+            .view-modal {
+                padding: 0;
+            }
         }
 
         /* Loading Animation */
@@ -462,32 +488,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .scan-overlay {
-            position: absolute;
-            top: 10%;
-            left: 10%;
-            right: 10%;
-            bottom: 10%;
-            border: 2px dashed #28a745;
-            border-radius: 10px;
-            background: rgba(40, 167, 69, 0.1);
-            pointer-events: none;
-        }
-
-        .scan-overlay::before {
-            content: '📄 Position document within this area';
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #28a745;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            white-space: nowrap;
-        }
     </style>
 </head>
 <body>
@@ -503,7 +503,7 @@
         <h2>📄 Upload Required Documents</h2>
         
         <div class="status-bar">
-            <span class="status-badge status-approved">1. Personal Infuu ✅</span>
+            <span class="status-badge status-approved">1. Personal Info ✅</span>
             <span class="status-badge status-approved">2. Documents ✅</span>
             <span class="status-badge status-pending">3. Review</span>
         </div>
@@ -530,19 +530,19 @@
                     <button class="upload-btn btn-file">
                         📁 Choose File
                     </button>
-                    <button class="upload-btn btn-camera">
-                        📷 Scan Document
-                    </button>
                 </div>
                 <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="birth-cert">
             </div>
             <div class="uploaded-file" data-file="birth-cert">
                 <div class="file-info">
-                    <div class="file-details">
+                    <div class="file-details" data-view="birth-cert">
                         <span class="file-name">📄</span>
                         <span class="file-size"></span>
                     </div>
-                    <button class="remove-btn">🗑️ Remove</button>
+                    <div class="file-actions">
+                        <button class="view-btn" data-view="birth-cert">👁️ View</button>
+                        <button class="remove-btn">🗑️ Remove</button>
+                    </div>
                 </div>
             </div>
             <div class="loading" data-loading="birth-cert">
@@ -562,19 +562,19 @@
                     <button class="upload-btn btn-file">
                         📁 Choose File
                     </button>
-                    <button class="upload-btn btn-camera">
-                        📷 Scan Document
-                    </button>
                 </div>
                 <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="report-card">
             </div>
             <div class="uploaded-file" data-file="report-card">
                 <div class="file-info">
-                    <div class="file-details">
+                    <div class="file-details" data-view="report-card">
                         <span class="file-name">📊</span>
                         <span class="file-size"></span>
                     </div>
-                    <button class="remove-btn">🗑️ Remove</button>
+                    <div class="file-actions">
+                        <button class="view-btn" data-view="report-card">👁️ View</button>
+                        <button class="remove-btn">🗑️ Remove</button>
+                    </div>
                 </div>
             </div>
             <div class="loading" data-loading="report-card">
@@ -594,19 +594,19 @@
                     <button class="upload-btn btn-file">
                         📁 Choose File
                     </button>
-                    <button class="upload-btn btn-camera">
-                        📷 Scan Document
-                    </button>
                 </div>
                 <input type="file" class="file-input" accept=".jpg,.jpeg,.png" data-target="id-photo">
             </div>
             <div class="uploaded-file" data-file="id-photo">
                 <div class="file-info">
-                    <div class="file-details">
+                    <div class="file-details" data-view="id-photo">
                         <span class="file-name">📸</span>
                         <span class="file-size"></span>
                     </div>
-                    <button class="remove-btn">🗑️ Remove</button>
+                    <div class="file-actions">
+                        <button class="view-btn" data-view="id-photo">👁️ View</button>
+                        <button class="remove-btn">🗑️ Remove</button>
+                    </div>
                 </div>
             </div>
             <div class="loading" data-loading="id-photo">
@@ -626,19 +626,19 @@
                     <button class="upload-btn btn-file">
                         📁 Choose File
                     </button>
-                    <button class="upload-btn btn-camera">
-                        📷 Scan Document
-                    </button>
                 </div>
                 <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="moral-cert">
             </div>
             <div class="uploaded-file" data-file="moral-cert">
                 <div class="file-info">
-                    <div class="file-details">
+                    <div class="file-details" data-view="moral-cert">
                         <span class="file-name">🏆</span>
                         <span class="file-size"></span>
                     </div>
-                    <button class="remove-btn">🗑️ Remove</button>
+                    <div class="file-actions">
+                        <button class="view-btn" data-view="moral-cert">👁️ View</button>
+                        <button class="remove-btn">🗑️ Remove</button>
+                    </div>
                 </div>
             </div>
             <div class="loading" data-loading="moral-cert">
@@ -653,518 +653,280 @@
         </div>
     </div>
 
-    <!-- Camera Modal -->
-    <div class="camera-modal" id="cameraModal">
-        <div class="camera-container">
-            <h3 style="color: #333; margin: 0;">📷 Document Scanner</h3>
-            <div class="camera-preview">
-                <div style="position: relative;">
-                    <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
-                    <div class="scan-overlay"></div>
-                </div>
-                <div class="preview-container" id="previewContainer">
-                    <h4 style="color: #333; margin: 0;">📄 Scanned Document Preview</h4>
-                    <img class="preview-image" id="previewImage" alt="Scanned document preview">
-                    <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
-                        Review your scanned document. If it's clear and readable, click "Use This Scan". 
-                        If it's blurry or unclear, click "Retake" to scan again.
-                    </p>
-                </div>
+    <!-- Document View Modal -->
+    <div class="view-modal" id="viewModal">
+        <div class="view-container">
+            <div class="view-header">
+                <h3 class="view-title" id="viewTitle">📄 Document Preview</h3>
+                <button class="close-view-btn" id="closeViewBtn">❌ Close</button>
             </div>
-            <div class="camera-controls">
-                <button class="camera-btn btn-capture" id="captureBtn">📷 Capture & Scan</button>
-                <button class="camera-btn btn-capture" id="useScanBtn" style="display: none; background: #28a745;">✅ Use This Scan</button>
-                <button class="camera-btn btn-capture" id="retakeBtn" style="display: none; background: #ffc107; color: #000;">🔄 Retake</button>
-                <button class="camera-btn btn-close" id="closeCameraBtn">❌ Close</button>
+            <div class="document-preview" id="documentPreview">
+                <div class="preview-message">Loading document...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Document Scanner JavaScript Code
-class DocumentScanner {
-    constructor() {
-        this.currentStream = null;
-        this.currentUploadTarget = null;
-        this.capturedImageData = null;
-        this.init();
-    }
+        class DocumentUploader {
+            constructor() {
+                this.uploadedFiles = new Map();
+                this.fileURLs = new Map();
+                this.init();
+            }
 
-    init() {
-        this.detectDevice();
-        this.setupEventListeners();
-        this.setupDragAndDrop();
-    }
+            init() {
+                this.setupEventListeners();
+            }
 
-    // Detect if device is mobile
-    detectDevice() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                         (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
-        
-        // Show camera buttons only on mobile
-        const cameraButtons = document.querySelectorAll('.btn-camera');
-        cameraButtons.forEach(btn => {
-            btn.style.display = isMobile ? 'flex' : 'none';
-        });
-    }
+            setupEventListeners() {
+                // File input change events
+                document.querySelectorAll('.file-input').forEach(input => {
+                    input.addEventListener('change', (e) => this.handleFileSelect(e));
+                });
 
-    setupEventListeners() {
-        // File input buttons
-        document.querySelectorAll('.btn-file').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const uploadArea = e.target.closest('.upload-area');
-                const fileInput = uploadArea.querySelector('.file-input');
-                fileInput.click();
-            });
-        });
+                // Upload area click events
+                document.querySelectorAll('.upload-area').forEach(area => {
+                    const fileInput = area.querySelector('.file-input');
+                    const fileBtn = area.querySelector('.btn-file');
 
-        // Camera buttons
-        document.querySelectorAll('.btn-camera').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const uploadArea = e.target.closest('.upload-area');
-                const target = uploadArea.dataset.upload;
-                this.openCamera(target);
-            });
-        });
+                    // File button click
+                    fileBtn?.addEventListener('click', () => fileInput.click());
 
-        // File inputs
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.handleFileSelect(e);
-            });
-        });
+                    // Drag and drop events
+                    area.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    area.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                    area.addEventListener('drop', (e) => this.handleDrop(e));
 
-        // Remove buttons
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.removeFile(e);
-            });
-        });
+                    // Click to upload
+                    area.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('upload-btn')) {
+                            fileInput.click();
+                        }
+                    });
+                });
 
-        // Camera modal controls
-        document.getElementById('captureBtn').addEventListener('click', () => {
-            this.captureDocument();
-        });
+                // Remove button events
+                document.querySelectorAll('.remove-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.removeFile(e));
+                });
 
-        document.getElementById('useScanBtn').addEventListener('click', () => {
-            this.useCapturedDocument();
-        });
+                // View button events
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.viewDocument(e));
+                });
 
-        document.getElementById('retakeBtn').addEventListener('click', () => {
-            this.retakeDocument();
-        });
+                // File details click events (also triggers view)
+                document.querySelectorAll('.file-details').forEach(details => {
+                    details.addEventListener('click', (e) => {
+                        const target = details.dataset.view;
+                        this.showDocumentPreview(target);
+                    });
+                });
 
-        document.getElementById('closeCameraBtn').addEventListener('click', () => {
-            this.closeCamera();
-        });
-    }
+                // Modal close event
+                document.getElementById('closeViewBtn').addEventListener('click', () => this.closeViewModal());
 
-    setupDragAndDrop() {
-        document.querySelectorAll('.upload-area').forEach(area => {
-            area.addEventListener('dragover', (e) => {
+                // Close modal when clicking outside
+                document.getElementById('viewModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'viewModal') {
+                        this.closeViewModal();
+                    }
+                });
+            }
+
+            handleDragOver(e) {
                 e.preventDefault();
-                area.classList.add('dragover');
-            });
+                e.currentTarget.classList.add('dragover');
+            }
 
-            area.addEventListener('dragleave', () => {
-                area.classList.remove('dragover');
-            });
-
-            area.addEventListener('drop', (e) => {
+            handleDragLeave(e) {
                 e.preventDefault();
-                area.classList.remove('dragover');
-                
+                e.currentTarget.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('dragover');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    const target = area.dataset.upload;
-                    this.processFile(files[0], target);
+                    const uploadTarget = e.currentTarget.dataset.upload;
+                    this.processFile(files[0], uploadTarget);
                 }
-            });
-        });
-    }
+            }
 
-    async openCamera(target) {
-        this.currentUploadTarget = target;
-        const modal = document.getElementById('cameraModal');
-        const video = document.getElementById('cameraVideo');
-        
-        try {
-            // Request camera access with high resolution for better document scanning
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: 'environment', // Use back camera on mobile
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                const uploadTarget = e.target.dataset.target;
+                if (file) {
+                    this.processFile(file, uploadTarget);
                 }
-            });
-            
-            this.currentStream = stream;
-            video.srcObject = stream;
-            modal.style.display = 'flex';
-            
-            // Reset modal state
-            this.resetModalState();
-            
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            alert('Unable to access camera. Please use file upload instead.');
-        }
-    }
+            }
 
-    resetModalState() {
-        const video = document.getElementById('cameraVideo');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
+            processFile(file, target) {
+                if (!this.validateFile(file)) return;
 
-        // Show video, hide preview
-        video.classList.remove('hide');
-        video.style.display = 'block';
-        previewContainer.classList.remove('show');
-        previewContainer.style.display = 'none';
-        previewImage.style.display = 'none';
-        
-        // Reset buttons
-        captureBtn.style.display = 'block';
-        useScanBtn.style.display = 'none';
-        retakeBtn.style.display = 'none';
-    }
-
-    captureDocument() {
-        const video = document.getElementById('cameraVideo');
-        const previewImage = document.getElementById('previewImage');
-        
-        // Create canvas to capture video frame
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        // Set canvas size to match video
-        canvas.width = video.videoWidth || video.clientWidth;
-        canvas.height = video.videoHeight || video.clientHeight;
-        
-        // Draw the current video frame
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert canvas to blob immediately (without enhancement for now to test)
-        canvas.toBlob((blob) => {
-            if (blob) {
-                const url = URL.createObjectURL(blob);
-                previewImage.src = url;
-                previewImage.style.display = 'block';
-                this.capturedImageData = blob;
+                this.showLoading(target);
                 
-                console.log('Image captured successfully:', {
-                    blobSize: blob.size,
-                    canvasSize: `${canvas.width}x${canvas.height}`,
-                    url: url
-                });
+                // Create URL for file preview
+                const fileURL = URL.createObjectURL(file);
+                this.fileURLs.set(target, fileURL);
                 
-                // Show preview
-                this.showPreview();
-            } else {
-                console.error('Failed to create blob from canvas');
-                alert('Failed to capture image. Please try again.');
+                // Simulate processing time
+                setTimeout(() => {
+                    this.uploadedFiles.set(target, file);
+                    this.showUploadedFile(file, target);
+                    this.hideLoading(target);
+                }, 2000);
             }
-        }, 'image/jpeg', 0.9);
-    }
 
-    enhanceDocument(imageData) {
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
-        
-        // Create new image data for enhanced version
-        const enhanced = new ImageData(width, height);
-        const enhancedData = enhanced.data;
-        
-        // Apply contrast enhancement and noise reduction
-        for (let i = 0; i < data.length; i += 4) {
-            let r = data[i];
-            let g = data[i + 1];
-            let b = data[i + 2];
-            let a = data[i + 3];
-            
-            // Convert to grayscale for better document processing
-            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-            
-            // Apply contrast enhancement
-            const contrast = 1.5;
-            const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
-            const enhancedGray = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
-            
-            // Apply threshold for better text visibility
-            const threshold = 128;
-            const finalValue = enhancedGray > threshold ? 
-                Math.min(255, enhancedGray + 30) : // Brighten light areas
-                Math.max(0, enhancedGray - 20);    // Darken dark areas
-            
-            enhancedData[i] = finalValue;     // R
-            enhancedData[i + 1] = finalValue; // G
-            enhancedData[i + 2] = finalValue; // B
-            enhancedData[i + 3] = a;          // A
-        }
-        
-        return enhanced;
-    }
+            validateFile(file) {
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 
-    showPreview() {
-        const video = document.getElementById('cameraVideo');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
+                if (file.size > maxSize) {
+                    alert('File size must be less than 5MB');
+                    return false;
+                }
 
-        // Hide video and show preview
-        video.classList.add('hide');
-        video.style.display = 'none';
-        previewContainer.classList.add('show');
-        previewContainer.style.display = 'flex';
-        previewImage.style.display = 'block';
-        
-        // Update buttons
-        captureBtn.style.display = 'none';
-        useScanBtn.style.display = 'block';
-        retakeBtn.style.display = 'block';
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Only PDF, JPG, and PNG files are allowed');
+                    return false;
+                }
 
-        console.log('Preview shown:', {
-            previewSrc: previewImage.src,
-            previewDisplay: previewImage.style.display,
-            containerDisplay: previewContainer.style.display
-        });
-    }
-
-    retakeDocument() {
-        this.resetModalState();
-        this.capturedImageData = null;
-        
-        // Clear preview image URL to prevent memory leaks
-        const previewImage = document.getElementById('previewImage');
-        if (previewImage.src.startsWith('blob:')) {
-            URL.revokeObjectURL(previewImage.src);
-        }
-    }
-
-    useCapturedDocument() {
-        if (this.capturedImageData && this.currentUploadTarget) {
-            // Create a File object from the captured image
-            const file = new File([this.capturedImageData], 'scanned-document.jpg', {
-                type: 'image/jpeg'
-            });
-            
-            this.processFile(file, this.currentUploadTarget, true);
-            this.closeCamera();
-        }
-    }
-
-    closeCamera() {
-        // Stop camera stream
-        if (this.currentStream) {
-            this.currentStream.getTracks().forEach(track => track.stop());
-            this.currentStream = null;
-        }
-        
-        // Clear preview image URL
-        const previewImage = document.getElementById('previewImage');
-        if (previewImage.src.startsWith('blob:')) {
-            URL.revokeObjectURL(previewImage.src);
-        }
-        
-        // Hide modal
-        document.getElementById('cameraModal').style.display = 'none';
-        this.currentUploadTarget = null;
-        this.capturedImageData = null;
-    }
-
-    handleFileSelect(e) {
-        const file = e.target.files[0];
-        const target = e.target.dataset.target;
-        
-        if (file) {
-            this.processFile(file, target);
-        }
-    }
-
-    processFile(file, target, isScanned = false) {
-        // Validate file
-        if (!this.validateFile(file)) {
-            return;
-        }
-
-        // Show loading
-        this.showLoading(target);
-        
-        // Simulate processing time
-        setTimeout(() => {
-            this.showUploadedFile(file, target, isScanned);
-            this.hideLoading(target);
-        }, 1500);
-    }
-
-    validateFile(file) {
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-        
-        if (file.size > maxSize) {
-            alert('File size must be less than 5MB');
-            return false;
-        }
-        
-        if (!allowedTypes.includes(file.type)) {
-            alert('Please upload a valid file format (PDF, JPG, PNG)');
-            return false;
-        }
-        
-        return true;
-    }
-
-    showLoading(target) {
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const loading = document.querySelector(`[data-loading="${target}"]`);
-        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
-        
-        uploadArea.style.display = 'none';
-        uploadedFile.classList.remove('show');
-        loading.style.display = 'block';
-    }
-
-    hideLoading(target) {
-        const loading = document.querySelector(`[data-loading="${target}"]`);
-        loading.style.display = 'none';
-    }
-
-    showUploadedFile(file, target, isScanned = false) {
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
-        const fileName = uploadedFile.querySelector('.file-name');
-        const fileSize = uploadedFile.querySelector('.file-size');
-        
-        // Update file info
-        fileName.textContent = `${fileName.textContent} ${file.name}${isScanned ? ' (Scanned)' : ''}`;
-        fileSize.textContent = this.formatFileSize(file.size);
-        
-        // Show uploaded file info
-        uploadArea.style.display = 'none';
-        uploadedFile.classList.add('show');
-        
-        // Store file data for form submission
-        uploadedFile.dataset.fileData = URL.createObjectURL(file);
-        uploadedFile.dataset.fileName = file.name;
-        uploadedFile.dataset.fileSize = file.size;
-    }
-
-    removeFile(e) {
-        const uploadedFile = e.target.closest('.uploaded-file');
-        const target = uploadedFile.dataset.file;
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const fileName = uploadedFile.querySelector('.file-name');
-        
-        // Clean up object URL to prevent memory leaks
-        if (uploadedFile.dataset.fileData && uploadedFile.dataset.fileData.startsWith('blob:')) {
-            URL.revokeObjectURL(uploadedFile.dataset.fileData);
-        }
-        
-        // Reset file input
-        const fileInput = uploadArea.querySelector('.file-input');
-        fileInput.value = '';
-        
-        // Reset display
-        uploadedFile.classList.remove('show');
-        uploadArea.style.display = 'block';
-        
-        // Reset file name display
-        const originalIcon = fileName.textContent.split(' ')[0];
-        fileName.textContent = originalIcon;
-        
-        // Clear stored data
-        delete uploadedFile.dataset.fileData;
-        delete uploadedFile.dataset.fileName;
-        delete uploadedFile.dataset.fileSize;
-    }
-
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // Get all uploaded files for form submission
-    getUploadedFiles() {
-        const files = {};
-        document.querySelectorAll('.uploaded-file.show').forEach(element => {
-            const target = element.dataset.file;
-            files[target] = {
-                data: element.dataset.fileData,
-                name: element.dataset.fileName,
-                size: element.dataset.fileSize
-            };
-        });
-        return files;
-    }
-
-    // Check if all required documents are uploaded
-    validateAllUploads() {
-        const requiredUploads = ['birth-cert', 'report-card', 'id-photo', 'moral-cert'];
-        const uploadedFiles = this.getUploadedFiles();
-        
-        const missing = requiredUploads.filter(req => !uploadedFiles[req]);
-        
-        if (missing.length > 0) {
-            const missingNames = {
-                'birth-cert': 'Birth Certificate',
-                'report-card': 'Report Card',
-                'id-photo': 'ID Photo',
-                'moral-cert': 'Good Moral Certificate'
-            };
-            
-            const missingList = missing.map(m => missingNames[m]).join(', ');
-            alert(`Please upload the following required documents: ${missingList}`);
-            return false;
-        }
-        
-        return true;
-    }
-}
-
-// Initialize the document scanner when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.documentScanner = new DocumentScanner();
-    
-    // Update Review Application button to validate uploads
-    const reviewBtn = document.querySelector('.btn-primary');
-    if (reviewBtn) {
-        reviewBtn.addEventListener('click', (e) => {
-            if (!window.documentScanner.validateAllUploads()) {
-                e.preventDefault();
-                return false;
+                return true;
             }
-            // Proceed with form submission or navigation
-            console.log('All documents uploaded successfully!');
-            console.log('Files:', window.documentScanner.getUploadedFiles());
-        });
-    }
-});
 
-// Handle page unload to clean up resources
-window.addEventListener('beforeunload', () => {
-    if (window.documentScanner) {
-        // Clean up any active camera streams
-        if (window.documentScanner.currentStream) {
-            window.documentScanner.currentStream.getTracks().forEach(track => track.stop());
-        }
-        
-        // Clean up object URLs
-        document.querySelectorAll('.uploaded-file').forEach(element => {
-            if (element.dataset.fileData && element.dataset.fileData.startsWith('blob:')) {
-                URL.revokeObjectURL(element.dataset.fileData);
+            showLoading(target) {
+                const loadingEl = document.querySelector(`[data-loading="${target}"]`);
+                const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+                
+                uploadArea.style.display = 'none';
+                loadingEl.style.display = 'block';
             }
+
+            hideLoading(target) {
+                const loadingEl = document.querySelector(`[data-loading="${target}"]`);
+                loadingEl.style.display = 'none';
+            }
+
+            showUploadedFile(file, target) {
+                const uploadedEl = document.querySelector(`[data-file="${target}"]`);
+                const fileNameEl = uploadedEl.querySelector('.file-name');
+                const fileSizeEl = uploadedEl.querySelector('.file-size');
+
+                fileNameEl.textContent = `✅ ${file.name}`;
+                fileSizeEl.textContent = this.formatFileSize(file.size);
+                
+                uploadedEl.classList.add('show');
+            }
+
+            removeFile(e) {
+                const uploadedEl = e.target.closest('[data-file]');
+                const target = uploadedEl.dataset.file;
+                const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+
+                uploadedEl.classList.remove('show');
+                uploadArea.style.display = 'block';
+                
+                // Clean up file URL
+                if (this.fileURLs.has(target)) {
+                    URL.revokeObjectURL(this.fileURLs.get(target));
+                    this.fileURLs.delete(target);
+                }
+                
+                this.uploadedFiles.delete(target);
+
+                // Clear file input
+                const fileInput = document.querySelector(`[data-target="${target}"]`);
+                fileInput.value = '';
+            }
+
+            viewDocument(e) {
+                const target = e.target.dataset.view;
+                this.showDocumentPreview(target);
+            }
+
+            showDocumentPreview(target) {
+                if (!this.uploadedFiles.has(target)) {
+                    alert('No document found to preview.');
+                    return;
+                }
+
+                const file = this.uploadedFiles.get(target);
+                const fileURL = this.fileURLs.get(target);
+                const modal = document.getElementById('viewModal');
+                const title = document.getElementById('viewTitle');
+                const preview = document.getElementById('documentPreview');
+
+                // Set title based on document type
+                const titles = {
+                    'birth-cert': '📄 Birth Certificate',
+                    'report-card': '📊 Report Card / Form 138',
+                    'id-photo': '📸 ID Photo (2x2)',
+                    'moral-cert': '🏆 Certificate of Good Moral Character'
+                };
+                
+                title.textContent = titles[target] || '📄 Document Preview';
+
+                // Clear previous content
+                preview.innerHTML = '<div class="preview-message">Loading document...</div>';
+
+                // Show preview based on file type
+                if (file.type === 'application/pdf') {
+                    preview.innerHTML = `
+                        <iframe src="${fileURL}" class="pdf-preview" type="application/pdf">
+                            <div class="preview-message">
+                                📄 PDF Preview<br>
+                                <a href="${fileURL}" target="_blank" style="color: #007bff; text-decoration: underline;">
+                                    Click here to open PDF in new tab
+                                </a>
+                            </div>
+                        </iframe>
+                    `;
+                } else if (file.type.startsWith('image/')) {
+                    preview.innerHTML = `
+                        <img src="${fileURL}" alt="Document preview" class="document-image">
+                    `;
+                } else {
+                    preview.innerHTML = `
+                        <div class="preview-message">
+                            📄 Document: ${file.name}<br>
+                            File type: ${file.type}<br>
+                            Size: ${this.formatFileSize(file.size)}<br><br>
+                            <a href="${fileURL}" target="_blank" style="color: #007bff; text-decoration: underline;">
+                                Click here to download and view
+                            </a>
+                        </div>
+                    `;
+                }
+
+                modal.style.display = 'flex';
+            }
+
+            closeViewModal() {
+                const modal = document.getElementById('viewModal');
+                modal.style.display = 'none';
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DocumentUploader();
         });
-    }
-});
+
+        // Clean up URLs when page unloads
+        window.addEventListener('beforeunload', () => {
+            // This would clean up any remaining object URLs
+            // but the browser typically handles this automatically
+        });
     </script>
 </body>
 </html>
