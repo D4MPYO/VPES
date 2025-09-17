@@ -26,9 +26,9 @@
 
   <canvas id="scanCanvas"></canvas>
 
-  <!-- Libraries -->
+  <!-- OpenCV + jscanify -->
   <script src="https://docs.opencv.org/4.x/opencv.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/ColonelParrot/jscanify@master/src/jscanify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jscanify/1.4.0/jscanify.js" integrity="sha512-Fmes20mGaBQq4K5OBzNVoNOnLxZJFBkxQp1l2q1070pe7MzU2N3XFOtJD+MDytPudZZyrB5kD0MChsy+nWZ2Eg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
     const scanner = new jscanify();
@@ -37,19 +37,25 @@
     const canvas = document.getElementById('scanCanvas');
     const ctx = canvas.getContext('2d');
 
-    // === Camera Scan ===
+    // === Camera Scan (Optimized) ===
     scanBtn.addEventListener('click', async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }});
+        // Lower resolution for speed
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }
+        });
         const video = document.createElement("video");
         video.srcObject = stream;
         await video.play();
 
-        // Wait a bit for camera to adjust
+        // Wait a bit for focus
         setTimeout(() => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
+          // Scale down frame
+          const targetWidth = 640;
+          const scale = targetWidth / video.videoWidth;
+          canvas.width = targetWidth;
+          canvas.height = video.videoHeight * scale;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           // Process with jscanify
           const resultCanvas = scanner.highlightPaper(video, canvas, 500, 700);
