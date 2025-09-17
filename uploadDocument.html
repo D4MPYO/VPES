@@ -617,7 +617,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jscanify/1.2.0/jscanify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jscanify@1.2.0/dist/jscanify.min.js"></script>
     <script>
         class DocumentUploader {
             constructor() {
@@ -630,23 +630,6 @@
             init() {
                 this.setupEventListeners();
                 this.checkMobileDevice();
-                this.loadJScanify();
-            }
-
-            async loadJScanify() {
-                // Wait for JScanify to be available
-                if (typeof JScanify === 'undefined') {
-                    // Load JScanify from CDN
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/jscanify@1.2.0/dist/jscanify.min.js';
-                    script.onload = () => {
-                        console.log('JScanify loaded successfully');
-                    };
-                    script.onerror = () => {
-                        console.error('Failed to load JScanify');
-                    };
-                    document.head.appendChild(script);
-                }
             }
 
             checkMobileDevice() {
@@ -808,12 +791,6 @@
 
             async openScanner() {
                 try {
-                    // Check if JScanify is available
-                    if (typeof JScanify === 'undefined') {
-                        alert('Scanner is loading, please try again in a moment.');
-                        return;
-                    }
-
                     const modal = document.getElementById('cameraModal');
                     const container = document.getElementById('scanner-container');
                     
@@ -824,11 +801,10 @@
                     this.scanner = new JScanify();
                     
                     // Set scanner options
-                    const scannerElement = await this.scanner.init({
+                    await this.scanner.init({
                         containerId: 'scanner-container',
-                        scanButtonId: 'scan-btn',
+                        onResult: (result) => this.onScanResult(result),
                         options: {
-                            onResult: (result) => this.onScanResult(result),
                             cropperOptions: {
                                 checkCrossOrigin: false,
                             },
