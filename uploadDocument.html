@@ -503,7 +503,7 @@
         <h2>📄 Upload Required Documents</h2>
         
         <div class="status-bar">
-            <span class="status-badge status-approved">1. Personal Infooooo ✅</span>
+            <span class="status-badge status-approved">1. Personal Infuu ✅</span>
             <span class="status-badge status-approved">2. Documents ✅</span>
             <span class="status-badge status-pending">3. Review</span>
         </div>
@@ -814,12 +814,19 @@ class DocumentScanner {
     resetModalState() {
         const video = document.getElementById('cameraVideo');
         const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
         const captureBtn = document.getElementById('captureBtn');
         const useScanBtn = document.getElementById('useScanBtn');
         const retakeBtn = document.getElementById('retakeBtn');
 
+        // Show video, hide preview
         video.classList.remove('hide');
+        video.style.display = 'block';
         previewContainer.classList.remove('show');
+        previewContainer.style.display = 'none';
+        previewImage.style.display = 'none';
+        
+        // Reset buttons
         captureBtn.style.display = 'block';
         useScanBtn.style.display = 'none';
         retakeBtn.style.display = 'none';
@@ -833,27 +840,33 @@ class DocumentScanner {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
+        // Set canvas size to match video
+        canvas.width = video.videoWidth || video.clientWidth;
+        canvas.height = video.videoHeight || video.clientHeight;
         
-        // Get image data for processing
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        // Draw the current video frame
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Apply basic document enhancement
-        const enhancedImageData = this.enhanceDocument(imageData);
-        
-        // Put enhanced image back to canvas
-        context.putImageData(enhancedImageData, 0, 0);
-        
-        // Convert to blob for preview
+        // Convert canvas to blob immediately (without enhancement for now to test)
         canvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            previewImage.src = url;
-            this.capturedImageData = blob;
-            
-            // Show preview
-            this.showPreview();
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                previewImage.src = url;
+                previewImage.style.display = 'block';
+                this.capturedImageData = blob;
+                
+                console.log('Image captured successfully:', {
+                    blobSize: blob.size,
+                    canvasSize: `${canvas.width}x${canvas.height}`,
+                    url: url
+                });
+                
+                // Show preview
+                this.showPreview();
+            } else {
+                console.error('Failed to create blob from canvas');
+                alert('Failed to capture image. Please try again.');
+            }
         }, 'image/jpeg', 0.9);
     }
 
@@ -899,15 +912,28 @@ class DocumentScanner {
     showPreview() {
         const video = document.getElementById('cameraVideo');
         const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
         const captureBtn = document.getElementById('captureBtn');
         const useScanBtn = document.getElementById('useScanBtn');
         const retakeBtn = document.getElementById('retakeBtn');
 
+        // Hide video and show preview
         video.classList.add('hide');
+        video.style.display = 'none';
         previewContainer.classList.add('show');
+        previewContainer.style.display = 'flex';
+        previewImage.style.display = 'block';
+        
+        // Update buttons
         captureBtn.style.display = 'none';
         useScanBtn.style.display = 'block';
         retakeBtn.style.display = 'block';
+
+        console.log('Preview shown:', {
+            previewSrc: previewImage.src,
+            previewDisplay: previewImage.style.display,
+            containerDisplay: previewContainer.style.display
+        });
     }
 
     retakeDocument() {
@@ -1141,5 +1167,4 @@ window.addEventListener('beforeunload', () => {
 });
     </script>
 </body>
-
 </html>
