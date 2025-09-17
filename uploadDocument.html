@@ -333,20 +333,14 @@
             max-width: 100%;
             border-radius: 10px;
             overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        .camera-video {
-            width: 100%;
-            height: auto;
-            max-height: 60vh;
+        #scanner-container {
             border-radius: 10px;
-        }
-
-        #resultCanvas {
-            max-width: 100%;
-            max-height: 60vh;
-            border-radius: 10px;
-            border: 2px solid #28a745;
+            overflow: hidden;
         }
 
         .camera-controls {
@@ -628,8 +622,7 @@
         class DocumentUploader {
             constructor() {
                 this.currentUploadTarget = null;
-                this.currentStream = null;
-                this.scanner = new jscanify();
+                this.scanner = null;
                 this.uploadedFiles = new Map();
                 this.init();
             }
@@ -637,6 +630,23 @@
             init() {
                 this.setupEventListeners();
                 this.checkMobileDevice();
+                this.loadJScanify();
+            }
+
+            async loadJScanify() {
+                // Wait for JScanify to be available
+                if (typeof JScanify === 'undefined') {
+                    // Load JScanify from CDN
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/jscanify@1.2.0/dist/jscanify.min.js';
+                    script.onload = () => {
+                        console.log('JScanify loaded successfully');
+                    };
+                    script.onerror = () => {
+                        console.error('Failed to load JScanify');
+                    };
+                    document.head.appendChild(script);
+                }
             }
 
             checkMobileDevice() {
@@ -666,7 +676,7 @@
                     // Camera button click
                     cameraBtn?.addEventListener('click', () => {
                         this.currentUploadTarget = area.dataset.upload;
-                        this.openCamera();
+                        this.openScanner();
                     });
 
                     // Drag and drop events
@@ -688,8 +698,7 @@
                 });
 
                 // Camera modal events
-                document.getElementById('captureBtn').addEventListener('click', () => this.scanDocument());
-                document.getElementById('closeCameraBtn').addEventListener('click', () => this.closeCamera());
+                document.getElementById('closeCameraBtn').addEventListener('click', () => this.closeScanner());
             }
 
             handleDragOver(e) {
@@ -797,112 +806,115 @@
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
 
-            async openCamera() {
-                const modal = document.getElementById('cameraModal');
-                const video = document.getElementById('cameraVideo');
-                const canvas = document.getElementById('resultCanvas');
-
+            async openScanner() {
                 try {
-                    // Use back camera for document scanning
-                    this.currentStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
+                    // Check if JScanify is available
+                    if (typeof JScanify === 'undefined') {
+                        alert('Scanner is loading, please try again in a moment.');
+                        return;
+                    }
+
+                    const modal = document.getElementById('cameraModal');
+                    const container = document.getElementById('scanner-container');
+                    
+                    // Clear previous scanner instance
+                    container.innerHTML = '';
+
+                    // Initialize JScanify scanner
+                    this.scanner = new JScanify();
+                    
+                    // Set scanner options
+                    const scannerElement = await this.scanner.init({
+                        containerId: 'scanner-container',
+                        scanButtonId: 'scan-btn',
+                        options: {
+                            onResult: (result) => this.onScanResult(result),
+                            cropperOptions: {
+                                checkCrossOrigin: false,
+                            },
+                            scanner: {
+                                referenceWidth: 500,
+                                referenceHeight: 400,
+                                cropperBackgroundColor: 'rgba(0,0,0,0.8)',
+                                enableGalleryUpload: false
+                            }
                         }
                     });
 
-                    video.srcObject = this.currentStream;
-                    canvas.style.display = 'none';
-                    video.style.display = 'block';
                     modal.style.display = 'flex';
+
                 } catch (error) {
-                    console.error('Error accessing camera:', error);
-                    alert('Unable to access camera. Please check permissions.');
+                    console.error('Error initializing scanner:', error);
+                    alert('Unable to access camera or initialize scanner. Please check permissions.');
                 }
             }
 
-            async scanDocument() {
-                const video = document.getElementById('cameraVideo');
-                const canvas = document.getElementById('resultCanvas');
-                const captureBtn = document.getElementById('captureBtn');
-
-                // Show processing state
-                captureBtn.textContent = '🔄 Scanning...';
-                captureBtn.disabled = true;
-
+            onScanResult(result) {
                 try {
-                    // Capture frame from video
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = video.videoWidth;
-                    tempCanvas.height = video.videoHeight;
-                    tempCtx.drawImage(video, 0, 0);
-
-                    // Use JScanify to detect and extract document
-                    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    // Convert the result to blob
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
                     
-                    // Detect paper/document in the image
-                    const cornerPoints = this.scanner.findPaperContour(imageData);
-                    
-                    if (cornerPoints) {
-                        // Extract and perspective correct the document
-                        const scannedImage = this.scanner.extractPaper(imageData, cornerPoints, 800, 600);
-                        
-                        // Display the scanned result
-                        canvas.width = scannedImage.width;
-                        canvas.height = scannedImage.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.putImageData(scannedImage, 0, 0);
-                        
-                        // Hide video and show result
-                        video.style.display = 'none';
-                        canvas.style.display = 'block';
-                        
-                        // Update button to allow saving
-                        captureBtn.textContent = '💾 Save Document';
-                        captureBtn.onclick = () => this.saveScannedDocument(canvas);
-                        
-                    } else {
-                        alert('Could not detect document. Please ensure the document is clearly visible and try again.');
-                        captureBtn.textContent = '📷 Scan Document';
+                    // If result is a canvas
+                    if (result.tagName === 'CANVAS') {
+                        canvas.width = result.width;
+                        canvas.height = result.height;
+                        ctx.drawImage(result, 0, 0);
+                    } 
+                    // If result is an image data URL
+                    else if (typeof result === 'string' && result.startsWith('data:image')) {
+                        const img = new Image();
+                        img.onload = () => {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.drawImage(img, 0, 0);
+                            this.saveScannedImage(canvas);
+                        };
+                        img.src = result;
+                        return;
                     }
+                    // If result is image data
+                    else if (result instanceof ImageData) {
+                        canvas.width = result.width;
+                        canvas.height = result.height;
+                        ctx.putImageData(result, 0, 0);
+                    }
+
+                    this.saveScannedImage(canvas);
                 } catch (error) {
-                    console.error('Scanning error:', error);
-                    alert('Error scanning document. Please try again.');
-                    captureBtn.textContent = '📷 Scan Document';
+                    console.error('Error processing scan result:', error);
+                    alert('Error processing scanned image. Please try again.');
                 }
-                
-                captureBtn.disabled = false;
             }
 
-            saveScannedDocument(canvas) {
+            saveScannedImage(canvas) {
                 // Convert canvas to blob and create file
                 canvas.toBlob((blob) => {
                     const fileName = `scanned_document_${Date.now()}.jpg`;
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
                     this.processFile(file, this.currentUploadTarget);
-                    this.closeCamera();
+                    this.closeScanner();
                 }, 'image/jpeg', 0.9);
             }
 
-            closeCamera() {
+            closeScanner() {
                 const modal = document.getElementById('cameraModal');
-                const video = document.getElementById('cameraVideo');
-                const canvas = document.getElementById('resultCanvas');
-                const captureBtn = document.getElementById('captureBtn');
                 
-                if (this.currentStream) {
-                    this.currentStream.getTracks().forEach(track => track.stop());
-                    this.currentStream = null;
+                // Clean up scanner
+                if (this.scanner) {
+                    try {
+                        this.scanner.destroy();
+                    } catch (error) {
+                        console.log('Scanner cleanup error:', error);
+                    }
+                    this.scanner = null;
                 }
 
-                // Reset modal state
-                video.style.display = 'block';
-                canvas.style.display = 'none';
-                captureBtn.textContent = '📷 Scan Document';
-                captureBtn.onclick = () => this.scanDocument();
+                // Clear container
+                const container = document.getElementById('scanner-container');
+                container.innerHTML = '';
+
                 modal.style.display = 'none';
             }
         }
