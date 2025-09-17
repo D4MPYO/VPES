@@ -342,17 +342,11 @@
             border-radius: 10px;
         }
 
-        .crop-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 60%;
-            border: 2px dashed #fff;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(2px);
+        #resultCanvas {
+            max-width: 100%;
+            max-height: 60vh;
             border-radius: 10px;
+            border: 2px solid #28a745;
         }
 
         .camera-controls {
@@ -629,12 +623,13 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jscanify/1.2.0/jscanify.min.js"></script>
     <script>
         class DocumentUploader {
             constructor() {
                 this.currentUploadTarget = null;
                 this.currentStream = null;
-                this.facingMode = 'environment'; // Start with back camera
+                this.scanner = new jscanify();
                 this.uploadedFiles = new Map();
                 this.init();
             }
@@ -693,8 +688,7 @@
                 });
 
                 // Camera modal events
-                document.getElementById('captureBtn').addEventListener('click', () => this.capturePhoto());
-                document.getElementById('switchBtn').addEventListener('click', () => this.switchCamera());
+                document.getElementById('captureBtn').addEventListener('click', () => this.scanDocument());
                 document.getElementById('closeCameraBtn').addEventListener('click', () => this.closeCamera());
             }
 
@@ -806,17 +800,21 @@
             async openCamera() {
                 const modal = document.getElementById('cameraModal');
                 const video = document.getElementById('cameraVideo');
+                const canvas = document.getElementById('resultCanvas');
 
                 try {
+                    // Use back camera for document scanning
                     this.currentStream = await navigator.mediaDevices.getUserMedia({
                         video: {
-                            facingMode: this.facingMode,
+                            facingMode: 'environment',
                             width: { ideal: 1280 },
                             height: { ideal: 720 }
                         }
                     });
 
                     video.srcObject = this.currentStream;
+                    canvas.style.display = 'none';
+                    video.style.display = 'block';
                     modal.style.display = 'flex';
                 } catch (error) {
                     console.error('Error accessing camera:', error);
@@ -824,40 +822,64 @@
                 }
             }
 
-            async switchCamera() {
-                this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
-                await this.closeCamera();
-                await this.openCamera();
+            async scanDocument() {
+                const video = document.getElementById('cameraVideo');
+                const canvas = document.getElementById('resultCanvas');
+                const captureBtn = document.getElementById('captureBtn');
+
+                // Show processing state
+                captureBtn.textContent = '🔄 Scanning...';
+                captureBtn.disabled = true;
+
+                try {
+                    // Capture frame from video
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = video.videoWidth;
+                    tempCanvas.height = video.videoHeight;
+                    tempCtx.drawImage(video, 0, 0);
+
+                    // Use JScanify to detect and extract document
+                    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    // Detect paper/document in the image
+                    const cornerPoints = this.scanner.findPaperContour(imageData);
+                    
+                    if (cornerPoints) {
+                        // Extract and perspective correct the document
+                        const scannedImage = this.scanner.extractPaper(imageData, cornerPoints, 800, 600);
+                        
+                        // Display the scanned result
+                        canvas.width = scannedImage.width;
+                        canvas.height = scannedImage.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.putImageData(scannedImage, 0, 0);
+                        
+                        // Hide video and show result
+                        video.style.display = 'none';
+                        canvas.style.display = 'block';
+                        
+                        // Update button to allow saving
+                        captureBtn.textContent = '💾 Save Document';
+                        captureBtn.onclick = () => this.saveScannedDocument(canvas);
+                        
+                    } else {
+                        alert('Could not detect document. Please ensure the document is clearly visible and try again.');
+                        captureBtn.textContent = '📷 Scan Document';
+                    }
+                } catch (error) {
+                    console.error('Scanning error:', error);
+                    alert('Error scanning document. Please try again.');
+                    captureBtn.textContent = '📷 Scan Document';
+                }
+                
+                captureBtn.disabled = false;
             }
 
-            capturePhoto() {
-                const video = document.getElementById('cameraVideo');
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Set canvas size to video dimensions
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
-                // Draw the video frame to canvas
-                ctx.drawImage(video, 0, 0);
-
-                // Auto-crop to center 80% of the image (simulating document scanning)
-                const cropWidth = canvas.width * 0.8;
-                const cropHeight = canvas.height * 0.6;
-                const cropX = (canvas.width - cropWidth) / 2;
-                const cropY = (canvas.height - cropHeight) / 2;
-
-                const croppedCanvas = document.createElement('canvas');
-                const croppedCtx = croppedCanvas.getContext('2d');
-                croppedCanvas.width = cropWidth;
-                croppedCanvas.height = cropHeight;
-
-                croppedCtx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-
-                // Convert to blob and create file
-                croppedCanvas.toBlob((blob) => {
-                    const fileName = `captured_document_${Date.now()}.jpg`;
+            saveScannedDocument(canvas) {
+                // Convert canvas to blob and create file
+                canvas.toBlob((blob) => {
+                    const fileName = `scanned_document_${Date.now()}.jpg`;
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
                     this.processFile(file, this.currentUploadTarget);
@@ -867,12 +889,20 @@
 
             closeCamera() {
                 const modal = document.getElementById('cameraModal');
+                const video = document.getElementById('cameraVideo');
+                const canvas = document.getElementById('resultCanvas');
+                const captureBtn = document.getElementById('captureBtn');
                 
                 if (this.currentStream) {
                     this.currentStream.getTracks().forEach(track => track.stop());
                     this.currentStream = null;
                 }
 
+                // Reset modal state
+                video.style.display = 'block';
+                canvas.style.display = 'none';
+                captureBtn.textContent = '📷 Scan Document';
+                captureBtn.onclick = () => this.scanDocument();
                 modal.style.display = 'none';
             }
         }
