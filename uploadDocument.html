@@ -348,6 +348,31 @@
             border: 2px solid #667eea;
         }
 
+        .preview-image {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            max-height: 60vh;
+            border-radius: 10px;
+            border: 2px solid #28a745;
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .preview-container.show {
+            display: flex;
+        }
+
+        .camera-video.hide {
+            display: none;
+        }
+
         .camera-controls {
             display: flex;
             gap: 15px;
@@ -637,9 +662,19 @@
                     <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
                     <div class="scan-overlay"></div>
                 </div>
+                <div class="preview-container" id="previewContainer">
+                    <h4 style="color: #333; margin: 0;">📄 Scanned Document Preview</h4>
+                    <img class="preview-image" id="previewImage" alt="Scanned document preview">
+                    <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+                        Review your scanned document. If it's clear and readable, click "Use This Scan". 
+                        If it's blurry or unclear, click "Retake" to scan again.
+                    </p>
+                </div>
             </div>
             <div class="camera-controls">
                 <button class="camera-btn btn-capture" id="captureBtn">📷 Capture & Scan</button>
+                <button class="camera-btn btn-capture" id="useScanBtn" style="display: none; background: #28a745;">✅ Use This Scan</button>
+                <button class="camera-btn btn-capture" id="retakeBtn" style="display: none; background: #ffc107; color: #000;">🔄 Retake</button>
                 <button class="camera-btn btn-close" id="closeCameraBtn">❌ Close</button>
             </div>
         </div>
@@ -652,6 +687,7 @@
             constructor() {
                 this.currentUploadTarget = null;
                 this.currentStream = null;
+                this.scannedCanvas = null;
                 this.uploadedFiles = new Map();
                 this.init();
             }
@@ -712,6 +748,8 @@
 
                 // Camera modal events
                 document.getElementById('captureBtn').addEventListener('click', () => this.captureDocument());
+                document.getElementById('useScanBtn').addEventListener('click', () => this.acceptScan());
+                document.getElementById('retakeBtn').addEventListener('click', () => this.retakeScan());
                 document.getElementById('closeCameraBtn').addEventListener('click', () => this.closeCamera());
             }
 
@@ -846,6 +884,10 @@
             captureDocument() {
                 const video = document.getElementById('cameraVideo');
                 const captureBtn = document.getElementById('captureBtn');
+                const previewContainer = document.getElementById('previewContainer');
+                const previewImage = document.getElementById('previewImage');
+                const useScanBtn = document.getElementById('useScanBtn');
+                const retakeBtn = document.getElementById('retakeBtn');
 
                 // Show processing state
                 captureBtn.textContent = '🔄 Processing...';
@@ -865,21 +907,69 @@
                     // Apply document scanning simulation
                     this.applyDocumentScanEffect(canvas);
 
-                    // Convert to blob and save
-                    canvas.toBlob((blob) => {
-                        const fileName = `scanned_document_${Date.now()}.jpg`;
-                        const file = new File([blob], fileName, { type: 'image/jpeg' });
-                        
-                        this.processFile(file, this.currentUploadTarget);
-                        this.closeCamera();
-                    }, 'image/jpeg', 0.9);
+                    // Store the scanned canvas for later use
+                    this.scannedCanvas = canvas;
+
+                    // Show preview
+                    const previewDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    previewImage.src = previewDataUrl;
+
+                    // Hide camera view and show preview
+                    video.classList.add('hide');
+                    previewContainer.classList.add('show');
+
+                    // Update buttons
+                    captureBtn.style.display = 'none';
+                    useScanBtn.style.display = 'inline-flex';
+                    retakeBtn.style.display = 'inline-flex';
 
                 } catch (error) {
                     console.error('Capture error:', error);
                     alert('Error capturing document. Please try again.');
-                    captureBtn.textContent = '📷 Capture & Scan';
-                    captureBtn.disabled = false;
+                    this.resetCameraView();
                 }
+            }
+
+            acceptScan() {
+                if (!this.scannedCanvas) {
+                    alert('No scanned document available. Please try again.');
+                    return;
+                }
+
+                // Convert canvas to blob and save
+                this.scannedCanvas.toBlob((blob) => {
+                    const fileName = `scanned_document_${Date.now()}.jpg`;
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
+                    
+                    this.processFile(file, this.currentUploadTarget);
+                    this.closeCamera();
+                }, 'image/jpeg', 0.9);
+            }
+
+            retakeScan() {
+                this.resetCameraView();
+            }
+
+            resetCameraView() {
+                const video = document.getElementById('cameraVideo');
+                const captureBtn = document.getElementById('captureBtn');
+                const previewContainer = document.getElementById('previewContainer');
+                const useScanBtn = document.getElementById('useScanBtn');
+                const retakeBtn = document.getElementById('retakeBtn');
+
+                // Reset UI state
+                video.classList.remove('hide');
+                previewContainer.classList.remove('show');
+
+                // Reset buttons
+                captureBtn.style.display = 'inline-flex';
+                captureBtn.textContent = '📷 Capture & Scan';
+                captureBtn.disabled = false;
+                useScanBtn.style.display = 'none';
+                retakeBtn.style.display = 'none';
+
+                // Clear scanned canvas
+                this.scannedCanvas = null;
             }
 
             applyDocumentScanEffect(canvas) {
