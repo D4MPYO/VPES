@@ -4,8 +4,491 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPES SIMS - Document Upload</title>
-    <link rel="stylesheet" href="uploadDocument.css">
-  
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 2rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .requirements-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .requirements-card h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .requirements-card ul {
+            margin-left: 20px;
+        }
+
+        .requirements-card li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .upload-text {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-file {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-camera {
+            background: #28a745;
+            color: white;
+            display: none;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-file {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .uploaded-file.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .file-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #155724;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons {
+            text-align: center;
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Camera Modal */
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .camera-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .camera-preview {
+            position: relative;
+            max-width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .camera-video {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            max-height: 60vh;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            max-height: 60vh;
+            border-radius: 10px;
+            border: 2px solid #28a745;
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .preview-container.show {
+            display: flex;
+        }
+
+        .camera-video.hide {
+            display: none;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .camera-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-capture {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-close {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .btn-camera {
+                display: flex;
+            }
+
+            .upload-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .upload-btn {
+                width: 200px;
+                justify-content: center;
+            }
+
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 200px;
+                justify-content: center;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            bottom: 10%;
+            border: 2px dashed #28a745;
+            border-radius: 10px;
+            background: rgba(40, 167, 69, 0.1);
+            pointer-events: none;
+        }
+
+        .scan-overlay::before {
+            content: '📄 Position document within this area';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    </style>
 </head>
 <body>
     <div class="nav-bar">
@@ -197,188 +680,382 @@
         </div>
     </div>
 
-    <!-- JScanify Library -->
-    <script src="https://docs.opencv.org/4.7.0/opencv.js"></script>
     <script>
-        class DocumentScanner {
+        // Document Scanner JavaScript Code
+class DocumentScanner {
     constructor() {
-        this.currentUploadTarget = null;
         this.currentStream = null;
-        this.scannedCanvas = null;
-        this.uploadedFiles = new Map();
-        this.isOpenCVReady = false;
+        this.currentUploadTarget = null;
+        this.capturedImageData = null;
         this.init();
     }
 
     init() {
-        this.loadOpenCV();
+        this.detectDevice();
         this.setupEventListeners();
-        this.checkMobileDevice();
+        this.setupDragAndDrop();
     }
 
-    loadOpenCV() {
-        // Wait for OpenCV to load
-        if (typeof cv !== 'undefined') {
-            this.isOpenCVReady = true;
-        } else {
-            // Poll for OpenCV availability
-            const checkOpenCV = setInterval(() => {
-                if (typeof cv !== 'undefined') {
-                    this.isOpenCVReady = true;
-                    clearInterval(checkOpenCV);
-                    console.log('OpenCV.js is ready');
-                }
-            }, 100);
-        }
-    }
-
-    checkMobileDevice() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                        window.innerWidth <= 768;
-        if (isMobile) {
-            document.querySelectorAll('.btn-camera').forEach(btn => {
-                btn.style.display = 'flex';
-            });
-        }
+    // Detect if device is mobile
+    detectDevice() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                         (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        
+        // Show camera buttons only on mobile
+        const cameraButtons = document.querySelectorAll('.btn-camera');
+        cameraButtons.forEach(btn => {
+            btn.style.display = isMobile ? 'flex' : 'none';
+        });
     }
 
     setupEventListeners() {
-        // File input change events
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.addEventListener('change', (e) => this.handleFileSelect(e));
+        // File input buttons
+        document.querySelectorAll('.btn-file').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const uploadArea = e.target.closest('.upload-area');
+                const fileInput = uploadArea.querySelector('.file-input');
+                fileInput.click();
+            });
         });
 
-        // Upload area events
-        document.querySelectorAll('.upload-area').forEach(area => {
-            const fileInput = area.querySelector('.file-input');
-            const fileBtn = area.querySelector('.btn-file');
-            const cameraBtn = area.querySelector('.btn-camera');
+        // Camera buttons
+        document.querySelectorAll('.btn-camera').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const uploadArea = e.target.closest('.upload-area');
+                const target = uploadArea.dataset.upload;
+                this.openCamera(target);
+            });
+        });
 
-            fileBtn?.addEventListener('click', () => fileInput.click());
-            
-            cameraBtn?.addEventListener('click', () => {
-                this.currentUploadTarget = area.dataset.upload;
-                this.openCamera();
+        // File inputs
+        document.querySelectorAll('.file-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                this.handleFileSelect(e);
+            });
+        });
+
+        // Remove buttons
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.removeFile(e);
+            });
+        });
+
+        // Camera modal controls
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            this.captureDocument();
+        });
+
+        document.getElementById('useScanBtn').addEventListener('click', () => {
+            this.useCapturedDocument();
+        });
+
+        document.getElementById('retakeBtn').addEventListener('click', () => {
+            this.retakeDocument();
+        });
+
+        document.getElementById('closeCameraBtn').addEventListener('click', () => {
+            this.closeCamera();
+        });
+    }
+
+    setupDragAndDrop() {
+        document.querySelectorAll('.upload-area').forEach(area => {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
             });
 
-            // Drag and drop
-            area.addEventListener('dragover', (e) => this.handleDragOver(e));
-            area.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-            area.addEventListener('drop', (e) => this.handleDrop(e));
-            area.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('upload-btn')) {
-                    fileInput.click();
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const target = area.dataset.upload;
+                    this.processFile(files[0], target);
                 }
             });
         });
-
-        // Remove button events
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.removeFile(e));
-        });
-
-        // Camera modal events
-        document.getElementById('captureBtn')?.addEventListener('click', () => this.captureDocument());
-        document.getElementById('useScanBtn')?.addEventListener('click', () => this.acceptScan());
-        document.getElementById('retakeBtn')?.addEventListener('click', () => this.retakeScan());
-        document.getElementById('closeCameraBtn')?.addEventListener('click', () => this.closeCamera());
     }
 
-    handleDragOver(e) {
-        e.preventDefault();
-        e.currentTarget.classList.add('dragover');
-    }
-
-    handleDragLeave(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const uploadTarget = e.currentTarget.dataset.upload;
-            this.processFile(files[0], uploadTarget);
+    async openCamera(target) {
+        this.currentUploadTarget = target;
+        const modal = document.getElementById('cameraModal');
+        const video = document.getElementById('cameraVideo');
+        
+        try {
+            // Request camera access with high resolution for better document scanning
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: 'environment', // Use back camera on mobile
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            });
+            
+            this.currentStream = stream;
+            video.srcObject = stream;
+            modal.style.display = 'flex';
+            
+            // Reset modal state
+            this.resetModalState();
+            
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Unable to access camera. Please use file upload instead.');
         }
+    }
+
+    resetModalState() {
+        const video = document.getElementById('cameraVideo');
+        const previewContainer = document.getElementById('previewContainer');
+        const captureBtn = document.getElementById('captureBtn');
+        const useScanBtn = document.getElementById('useScanBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+
+        video.classList.remove('hide');
+        previewContainer.classList.remove('show');
+        captureBtn.style.display = 'block';
+        useScanBtn.style.display = 'none';
+        retakeBtn.style.display = 'none';
+    }
+
+    captureDocument() {
+        const video = document.getElementById('cameraVideo');
+        const previewImage = document.getElementById('previewImage');
+        
+        // Create canvas to capture video frame
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        
+        // Get image data for processing
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Apply basic document enhancement
+        const enhancedImageData = this.enhanceDocument(imageData);
+        
+        // Put enhanced image back to canvas
+        context.putImageData(enhancedImageData, 0, 0);
+        
+        // Convert to blob for preview
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            previewImage.src = url;
+            this.capturedImageData = blob;
+            
+            // Show preview
+            this.showPreview();
+        }, 'image/jpeg', 0.9);
+    }
+
+    enhanceDocument(imageData) {
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        
+        // Create new image data for enhanced version
+        const enhanced = new ImageData(width, height);
+        const enhancedData = enhanced.data;
+        
+        // Apply contrast enhancement and noise reduction
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i + 1];
+            let b = data[i + 2];
+            let a = data[i + 3];
+            
+            // Convert to grayscale for better document processing
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            // Apply contrast enhancement
+            const contrast = 1.5;
+            const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
+            const enhancedGray = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
+            
+            // Apply threshold for better text visibility
+            const threshold = 128;
+            const finalValue = enhancedGray > threshold ? 
+                Math.min(255, enhancedGray + 30) : // Brighten light areas
+                Math.max(0, enhancedGray - 20);    // Darken dark areas
+            
+            enhancedData[i] = finalValue;     // R
+            enhancedData[i + 1] = finalValue; // G
+            enhancedData[i + 2] = finalValue; // B
+            enhancedData[i + 3] = a;          // A
+        }
+        
+        return enhanced;
+    }
+
+    showPreview() {
+        const video = document.getElementById('cameraVideo');
+        const previewContainer = document.getElementById('previewContainer');
+        const captureBtn = document.getElementById('captureBtn');
+        const useScanBtn = document.getElementById('useScanBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+
+        video.classList.add('hide');
+        previewContainer.classList.add('show');
+        captureBtn.style.display = 'none';
+        useScanBtn.style.display = 'block';
+        retakeBtn.style.display = 'block';
+    }
+
+    retakeDocument() {
+        this.resetModalState();
+        this.capturedImageData = null;
+        
+        // Clear preview image URL to prevent memory leaks
+        const previewImage = document.getElementById('previewImage');
+        if (previewImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImage.src);
+        }
+    }
+
+    useCapturedDocument() {
+        if (this.capturedImageData && this.currentUploadTarget) {
+            // Create a File object from the captured image
+            const file = new File([this.capturedImageData], 'scanned-document.jpg', {
+                type: 'image/jpeg'
+            });
+            
+            this.processFile(file, this.currentUploadTarget, true);
+            this.closeCamera();
+        }
+    }
+
+    closeCamera() {
+        // Stop camera stream
+        if (this.currentStream) {
+            this.currentStream.getTracks().forEach(track => track.stop());
+            this.currentStream = null;
+        }
+        
+        // Clear preview image URL
+        const previewImage = document.getElementById('previewImage');
+        if (previewImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImage.src);
+        }
+        
+        // Hide modal
+        document.getElementById('cameraModal').style.display = 'none';
+        this.currentUploadTarget = null;
+        this.capturedImageData = null;
     }
 
     handleFileSelect(e) {
         const file = e.target.files[0];
-        const uploadTarget = e.target.dataset.target;
+        const target = e.target.dataset.target;
+        
         if (file) {
-            this.processFile(file, uploadTarget);
+            this.processFile(file, target);
         }
     }
 
-    processFile(file, target) {
-        if (!this.validateFile(file)) return;
+    processFile(file, target, isScanned = false) {
+        // Validate file
+        if (!this.validateFile(file)) {
+            return;
+        }
 
+        // Show loading
         this.showLoading(target);
         
+        // Simulate processing time
         setTimeout(() => {
-            this.uploadedFiles.set(target, file);
-            this.showUploadedFile(file, target);
+            this.showUploadedFile(file, target, isScanned);
             this.hideLoading(target);
         }, 1500);
     }
 
     validateFile(file) {
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 5 * 1024 * 1024; // 5MB
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-
+        
         if (file.size > maxSize) {
-            alert('File size must be less than 10MB');
+            alert('File size must be less than 5MB');
             return false;
         }
-
+        
         if (!allowedTypes.includes(file.type)) {
-            alert('Only PDF, JPG, and PNG files are allowed');
+            alert('Please upload a valid file format (PDF, JPG, PNG)');
             return false;
         }
-
+        
         return true;
     }
 
     showLoading(target) {
-        const loadingEl = document.querySelector(`[data-loading="${target}"]`);
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const loading = document.querySelector(`[data-loading="${target}"]`);
+        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
         
-        if (uploadArea) uploadArea.style.display = 'none';
-        if (loadingEl) loadingEl.style.display = 'block';
+        uploadArea.style.display = 'none';
+        uploadedFile.classList.remove('show');
+        loading.style.display = 'block';
     }
 
     hideLoading(target) {
-        const loadingEl = document.querySelector(`[data-loading="${target}"]`);
-        if (loadingEl) loadingEl.style.display = 'none';
+        const loading = document.querySelector(`[data-loading="${target}"]`);
+        loading.style.display = 'none';
     }
 
-    showUploadedFile(file, target) {
-        const uploadedEl = document.querySelector(`[data-file="${target}"]`);
-        if (!uploadedEl) return;
-
-        const fileNameEl = uploadedEl.querySelector('.file-name');
-        const fileSizeEl = uploadedEl.querySelector('.file-size');
-
-        if (fileNameEl) fileNameEl.textContent = `✅ ${file.name}`;
-        if (fileSizeEl) fileSizeEl.textContent = this.formatFileSize(file.size);
+    showUploadedFile(file, target, isScanned = false) {
+        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
+        const fileName = uploadedFile.querySelector('.file-name');
+        const fileSize = uploadedFile.querySelector('.file-size');
         
-        uploadedEl.classList.add('show');
+        // Update file info
+        fileName.textContent = `${fileName.textContent} ${file.name}${isScanned ? ' (Scanned)' : ''}`;
+        fileSize.textContent = this.formatFileSize(file.size);
+        
+        // Show uploaded file info
+        uploadArea.style.display = 'none';
+        uploadedFile.classList.add('show');
+        
+        // Store file data for form submission
+        uploadedFile.dataset.fileData = URL.createObjectURL(file);
+        uploadedFile.dataset.fileName = file.name;
+        uploadedFile.dataset.fileSize = file.size;
     }
 
     removeFile(e) {
-        const uploadedEl = e.target.closest('[data-file]');
-        const target = uploadedEl.dataset.file;
+        const uploadedFile = e.target.closest('.uploaded-file');
+        const target = uploadedFile.dataset.file;
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-
-        uploadedEl.classList.remove('show');
-        if (uploadArea) uploadArea.style.display = 'block';
+        const fileName = uploadedFile.querySelector('.file-name');
         
-        this.uploadedFiles.delete(target);
-
-        const fileInput = document.querySelector(`[data-target="${target}"]`);
-        if (fileInput) fileInput.value = '';
+        // Clean up object URL to prevent memory leaks
+        if (uploadedFile.dataset.fileData && uploadedFile.dataset.fileData.startsWith('blob:')) {
+            URL.revokeObjectURL(uploadedFile.dataset.fileData);
+        }
+        
+        // Reset file input
+        const fileInput = uploadArea.querySelector('.file-input');
+        fileInput.value = '';
+        
+        // Reset display
+        uploadedFile.classList.remove('show');
+        uploadArea.style.display = 'block';
+        
+        // Reset file name display
+        const originalIcon = fileName.textContent.split(' ')[0];
+        fileName.textContent = originalIcon;
+        
+        // Clear stored data
+        delete uploadedFile.dataset.fileData;
+        delete uploadedFile.dataset.fileName;
+        delete uploadedFile.dataset.fileSize;
     }
 
     formatFileSize(bytes) {
@@ -389,465 +1066,79 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    async openCamera() {
-        try {
-            const modal = document.getElementById('cameraModal');
-            const video = document.getElementById('cameraVideo');
-            const overlay = document.getElementById('scanOverlay');
-
-            if (!modal || !video) {
-                alert('Camera modal elements not found');
-                return;
-            }
-
-            // Request camera with high resolution
-            this.currentStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 }
-                }
-            });
-
-            video.srcObject = this.currentStream;
-            modal.style.display = 'flex';
-
-            // Start document detection
-            video.onloadedmetadata = () => {
-                this.startDocumentDetection(video, overlay);
-            };
-
-        } catch (error) {
-            console.error('Camera error:', error);
-            alert('Unable to access camera. Please check permissions and try again.');
-        }
-    }
-
-    startDocumentDetection(video, overlay) {
-        if (!this.isOpenCVReady) {
-            console.log('OpenCV not ready, skipping document detection');
-            return;
-        }
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const detectDocuments = () => {
-            if (video.readyState === 4) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                try {
-                    const corners = this.detectDocumentCorners(canvas);
-                    this.drawDocumentOutline(overlay, corners, video);
-                } catch (e) {
-                    console.error('Document detection error:', e);
-                }
-            }
-            
-            // Continue detection if camera is still open
-            if (this.currentStream) {
-                requestAnimationFrame(detectDocuments);
-            }
-        };
-
-        detectDocuments();
-    }
-
-    detectDocumentCorners(canvas) {
-        const src = cv.imread(canvas);
-        const gray = new cv.Mat();
-        const blur = new cv.Mat();
-        const edges = new cv.Mat();
-        const contours = new cv.MatVector();
-        const hierarchy = new cv.Mat();
-
-        // Convert to grayscale
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        
-        // Apply Gaussian blur
-        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-        
-        // Detect edges using Canny
-        cv.Canny(blur, edges, 50, 150);
-        
-        // Find contours
-        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        let bestContour = null;
-        let maxArea = 0;
-        const minArea = canvas.width * canvas.height * 0.1; // At least 10% of image
-
-        // Find largest rectangular contour
-        for (let i = 0; i < contours.size(); i++) {
-            const contour = contours.get(i);
-            const area = cv.contourArea(contour);
-            
-            if (area > minArea && area > maxArea) {
-                const peri = cv.arcLength(contour, true);
-                const approx = new cv.Mat();
-                cv.approxPolyDP(contour, approx, 0.02 * peri, true);
-                
-                // Check if it's roughly rectangular (4 corners)
-                if (approx.rows === 4) {
-                    maxArea = area;
-                    bestContour = approx.clone();
-                }
-                approx.delete();
-            }
-            contour.delete();
-        }
-
-        // Clean up
-        src.delete();
-        gray.delete();
-        blur.delete();
-        edges.delete();
-        contours.delete();
-        hierarchy.delete();
-
-        // Convert contour points to screen coordinates
-        if (bestContour) {
-            const points = [];
-            for (let i = 0; i < bestContour.rows; i++) {
-                const point = {
-                    x: bestContour.intPtr(i, 0)[0],
-                    y: bestContour.intPtr(i, 0)[1]
-                };
-                points.push(point);
-            }
-            bestContour.delete();
-            return this.orderPoints(points);
-        }
-
-        return null;
-    }
-
-    orderPoints(points) {
-        // Order points as: top-left, top-right, bottom-right, bottom-left
-        if (points.length !== 4) return null;
-
-        const rect = new Array(4);
-        
-        // Sum and difference to find corners
-        const sums = points.map(p => p.x + p.y);
-        const diffs = points.map(p => p.x - p.y);
-        
-        rect[0] = points[sums.indexOf(Math.min(...sums))]; // top-left
-        rect[2] = points[sums.indexOf(Math.max(...sums))]; // bottom-right
-        rect[1] = points[diffs.indexOf(Math.max(...diffs))]; // top-right
-        rect[3] = points[diffs.indexOf(Math.min(...diffs))]; // bottom-left
-        
-        return rect;
-    }
-
-    drawDocumentOutline(overlay, corners, video) {
-        if (!overlay || !corners) {
-            if (overlay) overlay.innerHTML = '';
-            return;
-        }
-
-        const videoRect = video.getBoundingClientRect();
-        const scaleX = videoRect.width / video.videoWidth;
-        const scaleY = videoRect.height / video.videoHeight;
-
-        // Create SVG for drawing the outline
-        overlay.innerHTML = `
-            <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
-                <polygon 
-                    points="${corners.map(p => `${p.x * scaleX},${p.y * scaleY}`).join(' ')}"
-                    fill="rgba(0, 255, 0, 0.2)"
-                    stroke="#00ff00"
-                    stroke-width="3"
-                    stroke-dasharray="10,5"
-                />
-                ${corners.map((p, i) => `
-                    <circle 
-                        cx="${p.x * scaleX}" 
-                        cy="${p.y * scaleY}" 
-                        r="8" 
-                        fill="#00ff00" 
-                        stroke="#ffffff" 
-                        stroke-width="2"
-                    />
-                `).join('')}
-            </svg>
-            <div style="position: absolute; top: 20px; left: 20px; 
-                        background: rgba(0, 255, 0, 0.8); color: white; 
-                        padding: 8px 16px; border-radius: 20px; font-weight: bold;">
-                📄 Document Detected
-            </div>
-        `;
-    }
-
-    captureDocument() {
-        const video = document.getElementById('cameraVideo');
-        const captureBtn = document.getElementById('captureBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const scanOverlay = document.getElementById('scanOverlay');
-
-        if (!video || !captureBtn || !previewContainer || !previewImage) {
-            alert('Required elements not found');
-            return;
-        }
-
-        // Show processing state
-        captureBtn.textContent = '🔄 Scanning Document...';
-        captureBtn.disabled = true;
-
-        try {
-            // Create canvas for capture
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Apply document scanning and perspective correction
-            const scannedCanvas = this.processDocumentScan(canvas);
-            this.scannedCanvas = scannedCanvas;
-
-            // Show enhanced preview
-            const previewDataUrl = scannedCanvas.toDataURL('image/jpeg', 0.95);
-            previewImage.src = previewDataUrl;
-
-            // Update UI
-            video.classList.add('hide');
-            if (scanOverlay) scanOverlay.style.display = 'none';
-            previewContainer.classList.add('show');
-            this.updateCameraButtons();
-
-        } catch (error) {
-            console.error('Capture error:', error);
-            alert('Error scanning document. Please try again.');
-            this.resetCameraView();
-        }
-    }
-
-    processDocumentScan(canvas) {
-        if (!this.isOpenCVReady) {
-            // Fallback without OpenCV - simple enhancement
-            return this.enhanceImageSimple(canvas);
-        }
-
-        try {
-            // Use OpenCV for better document processing
-            const src = cv.imread(canvas);
-            const processed = this.perspectiveCorrection(src);
-            const enhanced = this.enhanceDocument(processed);
-            
-            // Create output canvas
-            const outputCanvas = document.createElement('canvas');
-            cv.imshow(outputCanvas, enhanced);
-            
-            // Clean up
-            src.delete();
-            processed.delete();
-            enhanced.delete();
-            
-            return outputCanvas;
-        } catch (error) {
-            console.error('OpenCV processing failed:', error);
-            return this.enhanceImageSimple(canvas);
-        }
-    }
-
-    perspectiveCorrection(src) {
-        // Detect document corners
-        const corners = this.detectDocumentCorners(document.createElement('canvas'));
-        
-        if (!corners) {
-            return src.clone(); // Return original if no document detected
-        }
-
-        // Define destination points (A4 aspect ratio)
-        const width = 595; // A4 width in points
-        const height = 842; // A4 height in points
-        
-        const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            corners[0].x, corners[0].y, // top-left
-            corners[1].x, corners[1].y, // top-right
-            corners[2].x, corners[2].y, // bottom-right
-            corners[3].x, corners[3].y  // bottom-left
-        ]);
-
-        const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            0, 0,          // top-left
-            width, 0,      // top-right
-            width, height, // bottom-right
-            0, height      // bottom-left
-        ]);
-
-        // Get perspective transform matrix
-        const transformMatrix = cv.getPerspectiveTransform(srcPoints, dstPoints);
-        
-        // Apply perspective correction
-        const corrected = new cv.Mat();
-        cv.warpPerspective(src, corrected, transformMatrix, new cv.Size(width, height));
-        
-        // Clean up
-        srcPoints.delete();
-        dstPoints.delete();
-        transformMatrix.delete();
-        
-        return corrected;
-    }
-
-    enhanceDocument(src) {
-        const enhanced = new cv.Mat();
-        const gray = new cv.Mat();
-        
-        // Convert to grayscale
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        
-        // Apply adaptive threshold for better text clarity
-        cv.adaptiveThreshold(gray, enhanced, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
-        
-        // Convert back to color
-        const result = new cv.Mat();
-        cv.cvtColor(enhanced, result, cv.COLOR_GRAY2RGBA);
-        
-        gray.delete();
-        enhanced.delete();
-        
-        return result;
-    }
-
-    enhanceImageSimple(canvas) {
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-
-        // Enhance contrast and brightness
-        for (let i = 0; i < data.length; i += 4) {
-            // Increase contrast
-            const contrast = 1.4;
-            const brightness = 10;
-            
-            data[i] = Math.max(0, Math.min(255, contrast * (data[i] - 128) + 128 + brightness));     // Red
-            data[i + 1] = Math.max(0, Math.min(255, contrast * (data[i + 1] - 128) + 128 + brightness)); // Green
-            data[i + 2] = Math.max(0, Math.min(255, contrast * (data[i + 2] - 128) + 128 + brightness)); // Blue
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        return canvas;
-    }
-
-    updateCameraButtons() {
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-
-        if (captureBtn) captureBtn.style.display = 'none';
-        if (useScanBtn) {
-            useScanBtn.style.display = 'inline-flex';
-            useScanBtn.textContent = '✅ Use This Scan';
-        }
-        if (retakeBtn) retakeBtn.style.display = 'inline-flex';
-    }
-
-    acceptScan() {
-        if (!this.scannedCanvas) {
-            alert('No scanned document available. Please try again.');
-            return;
-        }
-
-        this.scannedCanvas.toBlob((blob) => {
-            const fileName = `scanned_document_${Date.now()}.jpg`;
-            const file = new File([blob], fileName, { type: 'image/jpeg' });
-            
-            this.processFile(file, this.currentUploadTarget);
-            this.closeCamera();
-        }, 'image/jpeg', 0.95);
-    }
-
-    retakeScan() {
-        this.resetCameraView();
-    }
-
-    resetCameraView() {
-        const video = document.getElementById('cameraVideo');
-        const captureBtn = document.getElementById('captureBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const scanOverlay = document.getElementById('scanOverlay');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-
-        // Reset video view
-        if (video) video.classList.remove('hide');
-        if (scanOverlay) scanOverlay.style.display = 'block';
-        if (previewContainer) previewContainer.classList.remove('show');
-
-        // Reset buttons
-        if (captureBtn) {
-            captureBtn.style.display = 'inline-flex';
-            captureBtn.textContent = '📷 Scan Document';
-            captureBtn.disabled = false;
-        }
-        if (useScanBtn) useScanBtn.style.display = 'none';
-        if (retakeBtn) retakeBtn.style.display = 'none';
-
-        this.scannedCanvas = null;
-    }
-
-    closeCamera() {
-        const modal = document.getElementById('cameraModal');
-        
-        // Stop camera stream
-        if (this.currentStream) {
-            this.currentStream.getTracks().forEach(track => track.stop());
-            this.currentStream = null;
-        }
-
-        this.resetCameraView();
-        if (modal) modal.style.display = 'none';
-        
-        // Clear overlay
-        const overlay = document.getElementById('scanOverlay');
-        if (overlay) overlay.innerHTML = '';
-    }
-
-    // Public methods for external use
+    // Get all uploaded files for form submission
     getUploadedFiles() {
-        return Array.from(this.uploadedFiles.values());
+        const files = {};
+        document.querySelectorAll('.uploaded-file.show').forEach(element => {
+            const target = element.dataset.file;
+            files[target] = {
+                data: element.dataset.fileData,
+                name: element.dataset.fileName,
+                size: element.dataset.fileSize
+            };
+        });
+        return files;
     }
 
-    clearAllFiles() {
-        this.uploadedFiles.clear();
-        document.querySelectorAll('[data-file]').forEach(el => {
-            el.classList.remove('show');
-        });
-        document.querySelectorAll('[data-upload]').forEach(el => {
-            el.style.display = 'block';
-        });
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.value = '';
-        });
+    // Check if all required documents are uploaded
+    validateAllUploads() {
+        const requiredUploads = ['birth-cert', 'report-card', 'id-photo', 'moral-cert'];
+        const uploadedFiles = this.getUploadedFiles();
+        
+        const missing = requiredUploads.filter(req => !uploadedFiles[req]);
+        
+        if (missing.length > 0) {
+            const missingNames = {
+                'birth-cert': 'Birth Certificate',
+                'report-card': 'Report Card',
+                'id-photo': 'ID Photo',
+                'moral-cert': 'Good Moral Certificate'
+            };
+            
+            const missingList = missing.map(m => missingNames[m]).join(', ');
+            alert(`Please upload the following required documents: ${missingList}`);
+            return false;
+        }
+        
+        return true;
     }
 }
 
-// Initialize when DOM is loaded
+// Initialize the document scanner when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Ensure OpenCV is loaded before initializing
-    const initScanner = () => {
-        if (typeof cv !== 'undefined') {
-            window.documentScanner = new DocumentScanner();
-            console.log('Document Scanner initialized');
-        } else {
-            setTimeout(initScanner, 100);
-        }
-    };
+    window.documentScanner = new DocumentScanner();
     
-    initScanner();
+    // Update Review Application button to validate uploads
+    const reviewBtn = document.querySelector('.btn-primary');
+    if (reviewBtn) {
+        reviewBtn.addEventListener('click', (e) => {
+            if (!window.documentScanner.validateAllUploads()) {
+                e.preventDefault();
+                return false;
+            }
+            // Proceed with form submission or navigation
+            console.log('All documents uploaded successfully!');
+            console.log('Files:', window.documentScanner.getUploadedFiles());
+        });
+    }
 });
 
-// Export for module use if needed
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DocumentScanner;
-}
+// Handle page unload to clean up resources
+window.addEventListener('beforeunload', () => {
+    if (window.documentScanner) {
+        // Clean up any active camera streams
+        if (window.documentScanner.currentStream) {
+            window.documentScanner.currentStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Clean up object URLs
+        document.querySelectorAll('.uploaded-file').forEach(element => {
+            if (element.dataset.fileData && element.dataset.fileData.startsWith('blob:')) {
+                URL.revokeObjectURL(element.dataset.fileData);
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>
