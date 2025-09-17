@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPES SIMS - Document Upload</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 2rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .requirements-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .requirements-card h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .requirements-card ul {
+            margin-left: 20px;
+        }
+
+        .requirements-card li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .upload-text {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-file {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-camera {
+            background: #28a745;
+            color: white;
+            display: none;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .uploaded-file {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .uploaded-file.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .file-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #155724;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons {
+            text-align: center;
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Camera Modal */
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .camera-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .camera-preview {
+            position: relative;
+            max-width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .camera-video {
+            width: 100%;
+            height: auto;
+            max-height: 60vh;
+            border-radius: 10px;
+        }
+
+        .crop-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60%;
+            border: 2px dashed #fff;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            border-radius: 10px;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .camera-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-capture {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-close {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-switch {
+            background: #17a2b8;
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .btn-camera {
+                display: flex;
+            }
+
+            .upload-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .upload-btn {
+                width: 200px;
+                justify-content: center;
+            }
+
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 200px;
+                justify-content: center;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="logo">🏫 VPES SIMS</div>
+        <div class="nav-links">
+            <a href="#" class="nav-link">← Previous Step</a>
+            <a href="#" class="nav-link">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📄 Upload Required Documents</h2>
+        
+        <div class="status-bar">
+            <span class="status-badge status-approved">1. Personal Info ✅</span>
+            <span class="status-badge status-approved">2. Documents ✅</span>
+            <span class="status-badge status-pending">3. Review</span>
+        </div>
+
+        <div class="requirements-card">
+            <h3>📋 Document Requirements</h3>
+            <p>Please upload clear, readable copies of the following documents:</p>
+            <ul>
+                <li>Birth Certificate (PSA Copy)</li>
+                <li>Report Card / Form 138 (for transferees)</li>
+                <li>2x2 ID Photo (recent)</li>
+                <li>Certificate of Good Moral Character (for transferees)</li>
+            </ul>
+        </div>
+
+        <!-- Birth Certificate Upload -->
+        <div class="upload-section">
+            <div class="upload-title">📄 Birth Certificate</div>
+            <div class="upload-area" data-upload="birth-cert">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drag and drop your file here</div>
+                <div class="upload-hint">Supported formats: PDF, JPG, PNG (Max: 5MB)</div>
+                <div class="upload-buttons">
+                    <button class="upload-btn btn-file">
+                        📁 Choose File
+                    </button>
+                    <button class="upload-btn btn-camera">
+                        📷 Take Photo
+                    </button>
+                </div>
+                <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="birth-cert">
+            </div>
+            <div class="uploaded-file" data-file="birth-cert">
+                <div class="file-info">
+                    <div class="file-details">
+                        <span class="file-name">📄</span>
+                        <span class="file-size"></span>
+                    </div>
+                    <button class="remove-btn">🗑️ Remove</button>
+                </div>
+            </div>
+            <div class="loading" data-loading="birth-cert">
+                <div class="spinner"></div>
+                <div>Processing document...</div>
+            </div>
+        </div>
+
+        <!-- Report Card Upload -->
+        <div class="upload-section">
+            <div class="upload-title">📊 Report Card / Form 138</div>
+            <div class="upload-area" data-upload="report-card">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drag and drop your file here</div>
+                <div class="upload-hint">Supported formats: PDF, JPG, PNG (Max: 5MB)</div>
+                <div class="upload-buttons">
+                    <button class="upload-btn btn-file">
+                        📁 Choose File
+                    </button>
+                    <button class="upload-btn btn-camera">
+                        📷 Take Photo
+                    </button>
+                </div>
+                <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="report-card">
+            </div>
+            <div class="uploaded-file" data-file="report-card">
+                <div class="file-info">
+                    <div class="file-details">
+                        <span class="file-name">📊</span>
+                        <span class="file-size"></span>
+                    </div>
+                    <button class="remove-btn">🗑️ Remove</button>
+                </div>
+            </div>
+            <div class="loading" data-loading="report-card">
+                <div class="spinner"></div>
+                <div>Processing document...</div>
+            </div>
+        </div>
+
+        <!-- ID Photo Upload -->
+        <div class="upload-section">
+            <div class="upload-title">📸 ID Photo (2x2)</div>
+            <div class="upload-area" data-upload="id-photo">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drag and drop your file here</div>
+                <div class="upload-hint">Supported formats: JPG, PNG (Max: 5MB)</div>
+                <div class="upload-buttons">
+                    <button class="upload-btn btn-file">
+                        📁 Choose File
+                    </button>
+                    <button class="upload-btn btn-camera">
+                        📷 Take Photo
+                    </button>
+                </div>
+                <input type="file" class="file-input" accept=".jpg,.jpeg,.png" data-target="id-photo">
+            </div>
+            <div class="uploaded-file" data-file="id-photo">
+                <div class="file-info">
+                    <div class="file-details">
+                        <span class="file-name">📸</span>
+                        <span class="file-size"></span>
+                    </div>
+                    <button class="remove-btn">🗑️ Remove</button>
+                </div>
+            </div>
+            <div class="loading" data-loading="id-photo">
+                <div class="spinner"></div>
+                <div>Processing document...</div>
+            </div>
+        </div>
+
+        <!-- Good Moral Certificate Upload -->
+        <div class="upload-section">
+            <div class="upload-title">🏆 Certificate of Good Moral Character</div>
+            <div class="upload-area" data-upload="moral-cert">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drag and drop your file here</div>
+                <div class="upload-hint">Supported formats: PDF, JPG, PNG (Max: 5MB)</div>
+                <div class="upload-buttons">
+                    <button class="upload-btn btn-file">
+                        📁 Choose File
+                    </button>
+                    <button class="upload-btn btn-camera">
+                        📷 Take Photo
+                    </button>
+                </div>
+                <input type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png" data-target="moral-cert">
+            </div>
+            <div class="uploaded-file" data-file="moral-cert">
+                <div class="file-info">
+                    <div class="file-details">
+                        <span class="file-name">🏆</span>
+                        <span class="file-size"></span>
+                    </div>
+                    <button class="remove-btn">🗑️ Remove</button>
+                </div>
+            </div>
+            <div class="loading" data-loading="moral-cert">
+                <div class="spinner"></div>
+                <div>Processing document...</div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-secondary">⬅️ Previous Step</button>
+            <button class="btn btn-primary">➡️ Review Application</button>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-container">
+            <div class="camera-preview">
+                <video class="camera-video" id="cameraVideo" autoplay playsinline></video>
+                <div class="crop-overlay"></div>
+            </div>
+            <div class="camera-controls">
+                <button class="camera-btn btn-capture" id="captureBtn">📷 Capture</button>
+                <button class="camera-btn btn-switch" id="switchBtn">🔄 Switch Camera</button>
+                <button class="camera-btn btn-close" id="closeCameraBtn">❌ Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DocumentUploader {
+            constructor() {
+                this.currentUploadTarget = null;
+                this.currentStream = null;
+                this.facingMode = 'environment'; // Start with back camera
+                this.uploadedFiles = new Map();
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.checkMobileDevice();
+            }
+
+            checkMobileDevice() {
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (isMobile) {
+                    document.querySelectorAll('.btn-camera').forEach(btn => {
+                        btn.style.display = 'flex';
+                    });
+                }
+            }
+
+            setupEventListeners() {
+                // File input change events
+                document.querySelectorAll('.file-input').forEach(input => {
+                    input.addEventListener('change', (e) => this.handleFileSelect(e));
+                });
+
+                // Upload area click events
+                document.querySelectorAll('.upload-area').forEach(area => {
+                    const fileInput = area.querySelector('.file-input');
+                    const fileBtn = area.querySelector('.btn-file');
+                    const cameraBtn = area.querySelector('.btn-camera');
+
+                    // File button click
+                    fileBtn?.addEventListener('click', () => fileInput.click());
+
+                    // Camera button click
+                    cameraBtn?.addEventListener('click', () => {
+                        this.currentUploadTarget = area.dataset.upload;
+                        this.openCamera();
+                    });
+
+                    // Drag and drop events
+                    area.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    area.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                    area.addEventListener('drop', (e) => this.handleDrop(e));
+
+                    // Click to upload
+                    area.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('upload-btn')) {
+                            fileInput.click();
+                        }
+                    });
+                });
+
+                // Remove button events
+                document.querySelectorAll('.remove-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.removeFile(e));
+                });
+
+                // Camera modal events
+                document.getElementById('captureBtn').addEventListener('click', () => this.capturePhoto());
+                document.getElementById('switchBtn').addEventListener('click', () => this.switchCamera());
+                document.getElementById('closeCameraBtn').addEventListener('click', () => this.closeCamera());
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                e.currentTarget.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const uploadTarget = e.currentTarget.dataset.upload;
+                    this.processFile(files[0], uploadTarget);
+                }
+            }
+
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                const uploadTarget = e.target.dataset.target;
+                if (file) {
+                    this.processFile(file, uploadTarget);
+                }
+            }
+
+            processFile(file, target) {
+                if (!this.validateFile(file)) return;
+
+                this.showLoading(target);
+                
+                // Simulate processing time
+                setTimeout(() => {
+                    this.uploadedFiles.set(target, file);
+                    this.showUploadedFile(file, target);
+                    this.hideLoading(target);
+                }, 1500);
+            }
+
+            validateFile(file) {
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+
+                if (file.size > maxSize) {
+                    alert('File size must be less than 5MB');
+                    return false;
+                }
+
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Only PDF, JPG, and PNG files are allowed');
+                    return false;
+                }
+
+                return true;
+            }
+
+            showLoading(target) {
+                const loadingEl = document.querySelector(`[data-loading="${target}"]`);
+                const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+                
+                uploadArea.style.display = 'none';
+                loadingEl.style.display = 'block';
+            }
+
+            hideLoading(target) {
+                const loadingEl = document.querySelector(`[data-loading="${target}"]`);
+                loadingEl.style.display = 'none';
+            }
+
+            showUploadedFile(file, target) {
+                const uploadedEl = document.querySelector(`[data-file="${target}"]`);
+                const fileNameEl = uploadedEl.querySelector('.file-name');
+                const fileSizeEl = uploadedEl.querySelector('.file-size');
+
+                fileNameEl.textContent = `✅ ${file.name}`;
+                fileSizeEl.textContent = this.formatFileSize(file.size);
+                
+                uploadedEl.classList.add('show');
+            }
+
+            removeFile(e) {
+                const uploadedEl = e.target.closest('[data-file]');
+                const target = uploadedEl.dataset.file;
+                const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+
+                uploadedEl.classList.remove('show');
+                uploadArea.style.display = 'block';
+                
+                this.uploadedFiles.delete(target);
+
+                // Clear file input
+                const fileInput = document.querySelector(`[data-target="${target}"]`);
+                fileInput.value = '';
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            async openCamera() {
+                const modal = document.getElementById('cameraModal');
+                const video = document.getElementById('cameraVideo');
+
+                try {
+                    this.currentStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: this.facingMode,
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    });
+
+                    video.srcObject = this.currentStream;
+                    modal.style.display = 'flex';
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    alert('Unable to access camera. Please check permissions.');
+                }
+            }
+
+            async switchCamera() {
+                this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
+                await this.closeCamera();
+                await this.openCamera();
+            }
+
+            capturePhoto() {
+                const video = document.getElementById('cameraVideo');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Set canvas size to video dimensions
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw the video frame to canvas
+                ctx.drawImage(video, 0, 0);
+
+                // Auto-crop to center 80% of the image (simulating document scanning)
+                const cropWidth = canvas.width * 0.8;
+                const cropHeight = canvas.height * 0.6;
+                const cropX = (canvas.width - cropWidth) / 2;
+                const cropY = (canvas.height - cropHeight) / 2;
+
+                const croppedCanvas = document.createElement('canvas');
+                const croppedCtx = croppedCanvas.getContext('2d');
+                croppedCanvas.width = cropWidth;
+                croppedCanvas.height = cropHeight;
+
+                croppedCtx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+                // Convert to blob and create file
+                croppedCanvas.toBlob((blob) => {
+                    const fileName = `captured_document_${Date.now()}.jpg`;
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
+                    
+                    this.processFile(file, this.currentUploadTarget);
+                    this.closeCamera();
+                }, 'image/jpeg', 0.9);
+            }
+
+            closeCamera() {
+                const modal = document.getElementById('cameraModal');
+                
+                if (this.currentStream) {
+                    this.currentStream.getTracks().forEach(track => track.stop());
+                    this.currentStream = null;
+                }
+
+                modal.style.display = 'none';
+            }
+        }
+
+        // Initialize the document uploader when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DocumentUploader();
+        });
+    </script>
+</body>
+</html>
