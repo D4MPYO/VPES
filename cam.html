@@ -680,12 +680,10 @@
         </div>
     </div>
 
-   <script>
-    // Real Document Scanner with OpenCV.js
-class DocumentScanner {
+   <script>// Universal Document Scanner with OpenCV.js - Available Anytime
+class UniversalDocumentScanner {
     constructor() {
         this.currentStream = null;
-        this.currentUploadTarget = null;
         this.capturedImageData = null;
         this.opencv = null;
         this.isProcessing = false;
@@ -694,15 +692,15 @@ class DocumentScanner {
         this.processingCanvas = null;
         this.processingCtx = null;
         this.animationId = null;
+        this.modal = null;
+        this.onDocumentScanned = null;
         
         this.init();
     }
 
     async init() {
-        this.detectDevice();
-        this.setupEventListeners();
-        this.setupDragAndDrop();
         await this.loadOpenCV();
+        this.createModal();
     }
 
     // Load OpenCV.js
@@ -710,6 +708,7 @@ class DocumentScanner {
         return new Promise((resolve, reject) => {
             if (window.cv) {
                 this.opencv = window.cv;
+                console.log('OpenCV already loaded');
                 resolve();
                 return;
             }
@@ -722,7 +721,6 @@ class DocumentScanner {
                     console.log('OpenCV.js loaded successfully');
                     resolve();
                 } else {
-                    // Wait for OpenCV to initialize
                     window.onOpenCVReady = () => {
                         this.opencv = window.cv;
                         console.log('OpenCV.js initialized successfully');
@@ -738,102 +736,196 @@ class DocumentScanner {
         });
     }
 
-    // Detect if device is mobile
-    detectDevice() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                         (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    createModal() {
+        // Create modal HTML
+        const modalHTML = `
+            <div id="universalDocumentScannerModal" style="
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 10000;
+                justify-content: center;
+                align-items: center;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 16px;
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    overflow: hidden;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                ">
+                    <!-- Header -->
+                    <div style="
+                        padding: 20px;
+                        border-bottom: 1px solid #e9ecef;
+                        display: flex;
+                        justify-content: between;
+                        align-items: center;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                    ">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📄 Document Scanner</h3>
+                        <button id="closeScannerBtn" style="
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 16px;
+                            font-weight: bold;
+                            margin-left: auto;
+                        ">×</button>
+                    </div>
+                    
+                    <!-- Camera Preview -->
+                    <div style="position: relative; background: #000; min-height: 400px; display: flex; justify-content: center; align-items: center;">
+                        <video id="scannerVideo" autoplay playsinline style="
+                            max-width: 100%;
+                            max-height: 60vh;
+                            object-fit: contain;
+                        "></video>
+                        
+                        <!-- Preview Image -->
+                        <div id="scannerPreviewContainer" style="
+                            display: none;
+                            flex-direction: column;
+                            align-items: center;
+                            padding: 20px;
+                        ">
+                            <img id="scannerPreviewImage" style="
+                                max-width: 100%;
+                                max-height: 50vh;
+                                border-radius: 8px;
+                                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                            "/>
+                        </div>
+                        
+                        <!-- Detection Overlay -->
+                        <div id="scannerDetectionOverlay" style="
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            pointer-events: none;
+                            z-index: 10;
+                        ">
+                            <div id="scannerDetectionIndicator" style="
+                                position: absolute;
+                                top: 20px;
+                                left: 50%;
+                                transform: translateX(-50%);
+                                background: rgba(220, 53, 69, 0.95);
+                                color: white;
+                                padding: 12px 24px;
+                                border-radius: 25px;
+                                font-size: 14px;
+                                font-weight: 600;
+                                backdrop-filter: blur(10px);
+                                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+                            ">📄 Position document in frame</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div style="
+                        padding: 20px;
+                        background: #f8f9fa;
+                        display: flex;
+                        justify-content: center;
+                        gap: 12px;
+                        flex-wrap: wrap;
+                    ">
+                        <button id="captureDocBtn" style="
+                            background: linear-gradient(135deg, #28a745, #20c997);
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+                            transition: all 0.3s ease;
+                        ">📸 Capture Document</button>
+                        
+                        <button id="useScanResultBtn" style="
+                            display: none;
+                            background: linear-gradient(135deg, #007bff, #0056b3);
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+                        ">✅ Use This Scan</button>
+                        
+                        <button id="retakeScanBtn" style="
+                            display: none;
+                            background: linear-gradient(135deg, #ffc107, #e0a800);
+                            color: #000;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+                        ">🔄 Retake</button>
+                        
+                        <button id="uploadFileBtn" style="
+                            background: linear-gradient(135deg, #6c757d, #545b62);
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+                        ">📁 Upload File Instead</button>
+                        
+                        <input type="file" id="fileUploadInput" accept="image/*,application/pdf" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Insert modal into document
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.modal = document.getElementById('universalDocumentScannerModal');
         
-        const cameraButtons = document.querySelectorAll('.btn-camera');
-        cameraButtons.forEach(btn => {
-            btn.style.display = isMobile ? 'flex' : 'none';
-        });
+        // Setup event listeners
+        this.setupEventListeners();
     }
 
     setupEventListeners() {
-        // File input buttons
-        document.querySelectorAll('.btn-file').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const uploadArea = e.target.closest('.upload-area');
-                const fileInput = uploadArea.querySelector('.file-input');
-                fileInput.click();
-            });
-        });
-
-        // Camera buttons
-        document.querySelectorAll('.btn-camera').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const uploadArea = e.target.closest('.upload-area');
-                const target = uploadArea.dataset.upload;
-                this.openCamera(target);
-            });
-        });
-
-        // File inputs
-        document.querySelectorAll('.file-input').forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.handleFileSelect(e);
-            });
-        });
-
-        // Remove buttons
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.removeFile(e);
-            });
-        });
-
-        // Camera modal controls
-        document.getElementById('captureBtn').addEventListener('click', () => {
-            this.captureDocument();
-        });
-
-        document.getElementById('useScanBtn').addEventListener('click', () => {
-            this.useCapturedDocument();
-        });
-
-        document.getElementById('retakeBtn').addEventListener('click', () => {
-            this.retakeDocument();
-        });
-
-        document.getElementById('closeCameraBtn').addEventListener('click', () => {
-            this.closeCamera();
-        });
+        document.getElementById('closeScannerBtn').addEventListener('click', () => this.close());
+        document.getElementById('captureDocBtn').addEventListener('click', () => this.captureDocument());
+        document.getElementById('useScanResultBtn').addEventListener('click', () => this.useCapturedDocument());
+        document.getElementById('retakeScanBtn').addEventListener('click', () => this.retakeDocument());
+        document.getElementById('uploadFileBtn').addEventListener('click', () => this.showFileUpload());
+        document.getElementById('fileUploadInput').addEventListener('change', (e) => this.handleFileSelect(e));
     }
 
-    setupDragAndDrop() {
-        document.querySelectorAll('.upload-area').forEach(area => {
-            area.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                area.classList.add('dragover');
-            });
-
-            area.addEventListener('dragleave', () => {
-                area.classList.remove('dragover');
-            });
-
-            area.addEventListener('drop', (e) => {
-                e.preventDefault();
-                area.classList.remove('dragover');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    const target = area.dataset.upload;
-                    this.processFile(files[0], target);
-                }
-            });
-        });
-    }
-
-    async openCamera(target) {
+    // Public method to open scanner
+    async open(options = {}) {
         if (!this.opencv) {
-            alert('Document scanner is still loading. Please wait a moment and try again.');
+            alert('Document scanner is still loading. Please wait...');
             return;
         }
 
-        this.currentUploadTarget = target;
-        const modal = document.getElementById('cameraModal');
-        const video = document.getElementById('cameraVideo');
-        
+        this.onDocumentScanned = options.onDocumentScanned || null;
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { 
@@ -844,76 +936,44 @@ class DocumentScanner {
             });
             
             this.currentStream = stream;
+            const video = document.getElementById('scannerVideo');
             video.srcObject = stream;
-            modal.style.display = 'flex';
             
+            this.modal.style.display = 'flex';
             this.resetModalState();
             this.setupDocumentDetection(video);
             
         } catch (error) {
             console.error('Error accessing camera:', error);
-            alert('Unable to access camera. Please use file upload instead.');
+            // If camera fails, show file upload option
+            this.showFileUploadOnly();
         }
     }
 
+    showFileUploadOnly() {
+        this.modal.style.display = 'flex';
+        document.getElementById('scannerVideo').style.display = 'none';
+        document.getElementById('scannerDetectionOverlay').style.display = 'none';
+        document.getElementById('captureDocBtn').style.display = 'none';
+        
+        const indicator = document.getElementById('scannerDetectionIndicator');
+        indicator.innerHTML = '📁 Camera not available - Upload file instead';
+        indicator.style.background = 'rgba(108, 117, 125, 0.95)';
+        indicator.style.position = 'static';
+        indicator.style.transform = 'none';
+        indicator.style.margin = '20px auto';
+        indicator.style.display = 'block';
+    }
+
     setupDocumentDetection(video) {
-        // Create processing canvas
         this.processingCanvas = document.createElement('canvas');
         this.processingCtx = this.processingCanvas.getContext('2d');
         
-        // Create overlay for drawing detection results
-        this.createDetectionOverlay();
-        
-        // Start real-time detection
         video.addEventListener('loadedmetadata', () => {
             this.processingCanvas.width = video.videoWidth;
             this.processingCanvas.height = video.videoHeight;
             this.startDocumentDetection(video);
         });
-    }
-
-    createDetectionOverlay() {
-        const cameraPreview = document.querySelector('.camera-preview > div');
-        
-        // Remove existing overlay
-        const existingOverlay = cameraPreview.querySelector('.detection-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        
-        // Create new overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'detection-overlay';
-        overlay.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        `;
-        
-        // Create detection indicator
-        const indicator = document.createElement('div');
-        indicator.className = 'detection-indicator';
-        indicator.style.cssText = `
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(220, 53, 69, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        `;
-        indicator.textContent = '📄 Position document in frame';
-        
-        overlay.appendChild(indicator);
-        cameraPreview.appendChild(overlay);
     }
 
     startDocumentDetection(video) {
@@ -926,20 +986,15 @@ class DocumentScanner {
             this.isProcessing = true;
             
             try {
-                // Draw video frame to processing canvas
                 this.processingCtx.drawImage(video, 0, 0, this.processingCanvas.width, this.processingCanvas.height);
-                
-                // Detect document
                 const detected = this.detectDocument();
                 this.updateDetectionUI(detected);
-                
             } catch (error) {
                 console.error('Detection error:', error);
             }
             
             this.isProcessing = false;
             
-            // Continue detection loop
             if (this.currentStream) {
                 this.animationId = requestAnimationFrame(detectFrame);
             }
@@ -950,7 +1005,6 @@ class DocumentScanner {
 
     detectDocument() {
         try {
-            // Create OpenCV Mat from canvas
             const src = this.opencv.imread(this.processingCanvas);
             const gray = new this.opencv.Mat();
             const blur = new this.opencv.Mat();
@@ -958,35 +1012,24 @@ class DocumentScanner {
             const contours = new this.opencv.MatVector();
             const hierarchy = new this.opencv.Mat();
 
-            // Convert to grayscale
             this.opencv.cvtColor(src, gray, this.opencv.COLOR_RGBA2GRAY);
-            
-            // Apply Gaussian blur
             this.opencv.GaussianBlur(gray, blur, new this.opencv.Size(5, 5), 0);
-            
-            // Edge detection
             this.opencv.Canny(blur, edges, 50, 150);
-            
-            // Find contours
             this.opencv.findContours(edges, contours, hierarchy, this.opencv.RETR_EXTERNAL, this.opencv.CHAIN_APPROX_SIMPLE);
             
             let bestContour = null;
             let maxArea = 0;
             
-            // Find largest rectangular contour
             for (let i = 0; i < contours.size(); i++) {
                 const contour = contours.get(i);
                 const area = this.opencv.contourArea(contour);
                 
-                // Skip small contours
                 if (area < 10000) continue;
                 
-                // Approximate contour to polygon
                 const epsilon = 0.02 * this.opencv.arcLength(contour, true);
                 const approx = new this.opencv.Mat();
                 this.opencv.approxPolyDP(contour, approx, epsilon, true);
                 
-                // Check if it's a quadrilateral (4 points) and has significant area
                 if (approx.rows === 4 && area > maxArea) {
                     maxArea = area;
                     if (bestContour) bestContour.delete();
@@ -997,7 +1040,6 @@ class DocumentScanner {
                 contour.delete();
             }
             
-            // Clean up
             src.delete();
             gray.delete();
             blur.delete();
@@ -1006,7 +1048,6 @@ class DocumentScanner {
             hierarchy.delete();
             
             if (bestContour) {
-                // Extract corner points
                 const corners = [];
                 for (let i = 0; i < 4; i++) {
                     corners.push({
@@ -1016,8 +1057,6 @@ class DocumentScanner {
                 }
                 
                 bestContour.delete();
-                
-                // Order corners (top-left, top-right, bottom-right, bottom-left)
                 this.detectedCorners = this.orderCorners(corners);
                 return true;
             }
@@ -1032,106 +1071,77 @@ class DocumentScanner {
     }
 
     orderCorners(corners) {
-        // Sort by y-coordinate
         corners.sort((a, b) => a.y - b.y);
-        
-        // Top two points
         const top = corners.slice(0, 2).sort((a, b) => a.x - b.x);
-        // Bottom two points
         const bottom = corners.slice(2, 4).sort((a, b) => a.x - b.x);
         
-        return [
-            top[0],    // top-left
-            top[1],    // top-right
-            bottom[1], // bottom-right
-            bottom[0]  // bottom-left
-        ];
+        return [top[0], top[1], bottom[1], bottom[0]];
     }
 
     updateDetectionUI(detected) {
-        const overlay = document.querySelector('.detection-overlay');
-        const indicator = overlay.querySelector('.detection-indicator');
-        const video = document.getElementById('cameraVideo');
-        const captureBtn = document.getElementById('captureBtn');
+        const overlay = document.getElementById('scannerDetectionOverlay');
+        const indicator = document.getElementById('scannerDetectionIndicator');
+        const captureBtn = document.getElementById('captureDocBtn');
         
         if (detected && this.detectedCorners) {
-            // Update indicator
-            indicator.style.background = 'rgba(40, 167, 69, 0.9)';
+            indicator.style.background = 'rgba(40, 167, 69, 0.95)';
             indicator.innerHTML = '✅ Document Detected - Ready to Scan';
             
-            // Enable capture button with visual feedback
-            captureBtn.style.background = '#28a745';
-            captureBtn.style.boxShadow = '0 0 20px rgba(40, 167, 69, 0.5)';
+            captureBtn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            captureBtn.style.boxShadow = '0 4px 20px rgba(40, 167, 69, 0.5)';
             
-            // Draw detection outline
-            this.drawDetectionOutline(overlay, video);
-            
+            this.drawDetectionOutline();
             this.documentDetected = true;
         } else {
-            // Update indicator
-            indicator.style.background = 'rgba(220, 53, 69, 0.9)';
+            indicator.style.background = 'rgba(220, 53, 69, 0.95)';
             indicator.innerHTML = '📄 Position document in frame';
             
-            // Reset capture button
-            captureBtn.style.background = '#28a745';
-            captureBtn.style.boxShadow = 'none';
+            captureBtn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            captureBtn.style.boxShadow = '0 4px 12px rgba(40, 167, 69, 0.3)';
             
-            // Clear detection outline
-            this.clearDetectionOutline(overlay);
-            
+            this.clearDetectionOutline();
             this.documentDetected = false;
         }
     }
 
-    drawDetectionOutline(overlay, video) {
+    drawDetectionOutline() {
         if (!this.detectedCorners) return;
         
-        // Remove existing outline
-        const existingOutline = overlay.querySelector('.document-outline');
-        if (existingOutline) {
-            existingOutline.remove();
-        }
+        const overlay = document.getElementById('scannerDetectionOverlay');
+        const video = document.getElementById('scannerVideo');
         
-        // Create SVG overlay
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        let svg = overlay.querySelector('.document-outline');
+        if (svg) svg.remove();
+        
+        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.className = 'document-outline';
-        svg.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        `;
+        svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
         
-        // Calculate scaling factors
         const videoRect = video.getBoundingClientRect();
-        const scaleX = videoRect.width / this.processingCanvas.width;
-        const scaleY = videoRect.height / this.processingCanvas.height;
+        const overlayRect = overlay.getBoundingClientRect();
+        const scaleX = overlayRect.width / this.processingCanvas.width;
+        const scaleY = overlayRect.height / this.processingCanvas.height;
         
-        // Create polygon path
         const points = this.detectedCorners.map(corner => 
             `${corner.x * scaleX},${corner.y * scaleY}`
         ).join(' ');
         
         const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         polygon.setAttribute('points', points);
-        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('fill', 'rgba(40, 167, 69, 0.1)');
         polygon.setAttribute('stroke', '#28a745');
         polygon.setAttribute('stroke-width', '3');
         polygon.setAttribute('stroke-dasharray', '10,5');
         polygon.style.filter = 'drop-shadow(0 0 8px rgba(40, 167, 69, 0.8))';
         
-        // Add corner markers
-        this.detectedCorners.forEach((corner, index) => {
+        this.detectedCorners.forEach((corner) => {
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('cx', corner.x * scaleX);
             circle.setAttribute('cy', corner.y * scaleY);
-            circle.setAttribute('r', '8');
+            circle.setAttribute('r', '6');
             circle.setAttribute('fill', '#28a745');
             circle.setAttribute('stroke', 'white');
             circle.setAttribute('stroke-width', '2');
-            circle.style.filter = 'drop-shadow(0 0 4px rgba(0, 0, 0, 0.5))';
             svg.appendChild(circle);
         });
         
@@ -1139,45 +1149,34 @@ class DocumentScanner {
         overlay.appendChild(svg);
     }
 
-    clearDetectionOutline(overlay) {
-        const outline = overlay.querySelector('.document-outline');
-        if (outline) {
-            outline.remove();
-        }
+    clearDetectionOutline() {
+        const outline = document.querySelector('.document-outline');
+        if (outline) outline.remove();
     }
 
     async captureDocument() {
-        const video = document.getElementById('cameraVideo');
-        const previewImage = document.getElementById('previewImage');
-        
-        // Create capture canvas
+        const video = document.getElementById('scannerVideo');
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
         canvas.width = video.videoWidth || video.clientWidth;
         canvas.height = video.videoHeight || video.clientHeight;
-        
-        // Capture current frame
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         let finalCanvas = canvas;
         
-        // If document was detected, perform perspective correction
         if (this.documentDetected && this.detectedCorners) {
             finalCanvas = await this.perspectiveCorrection(canvas);
         }
         
-        // Convert to blob
         finalCanvas.toBlob((blob) => {
             if (blob) {
                 const url = URL.createObjectURL(blob);
+                const previewImage = document.getElementById('scannerPreviewImage');
                 previewImage.src = url;
-                previewImage.style.display = 'block';
                 this.capturedImageData = blob;
-                
                 this.showPreview();
                 
-                // Stop detection loop
                 if (this.animationId) {
                     cancelAnimationFrame(this.animationId);
                     this.animationId = null;
@@ -1195,41 +1194,29 @@ class DocumentScanner {
         
         try {
             const src = this.opencv.imread(sourceCanvas);
-            
-            // Define destination size (A4 ratio)
             const dstWidth = 800;
-            const dstHeight = 1131; // A4 ratio
+            const dstHeight = 1131;
             
-            // Source corners (detected)
             const srcCorners = this.opencv.matFromArray(4, 1, this.opencv.CV_32FC2, [
-                this.detectedCorners[0].x, this.detectedCorners[0].y, // top-left
-                this.detectedCorners[1].x, this.detectedCorners[1].y, // top-right
-                this.detectedCorners[2].x, this.detectedCorners[2].y, // bottom-right
-                this.detectedCorners[3].x, this.detectedCorners[3].y  // bottom-left
+                this.detectedCorners[0].x, this.detectedCorners[0].y,
+                this.detectedCorners[1].x, this.detectedCorners[1].y,
+                this.detectedCorners[2].x, this.detectedCorners[2].y,
+                this.detectedCorners[3].x, this.detectedCorners[3].y
             ]);
             
-            // Destination corners (rectangle)
             const dstCorners = this.opencv.matFromArray(4, 1, this.opencv.CV_32FC2, [
-                0, 0,                    // top-left
-                dstWidth, 0,             // top-right
-                dstWidth, dstHeight,     // bottom-right
-                0, dstHeight             // bottom-left
+                0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
             ]);
             
-            // Get perspective transform matrix
             const M = this.opencv.getPerspectiveTransform(srcCorners, dstCorners);
-            
-            // Apply perspective transformation
             const dst = new this.opencv.Mat();
             this.opencv.warpPerspective(src, dst, M, new this.opencv.Size(dstWidth, dstHeight));
             
-            // Convert back to canvas
             const correctedCanvas = document.createElement('canvas');
             correctedCanvas.width = dstWidth;
             correctedCanvas.height = dstHeight;
             this.opencv.imshow(correctedCanvas, dst);
             
-            // Clean up
             src.delete();
             dst.delete();
             srcCorners.delete();
@@ -1245,51 +1232,38 @@ class DocumentScanner {
     }
 
     showPreview() {
-        const video = document.getElementById('cameraVideo');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-        const overlay = document.querySelector('.detection-overlay');
+        const video = document.getElementById('scannerVideo');
+        const previewContainer = document.getElementById('scannerPreviewContainer');
+        const overlay = document.getElementById('scannerDetectionOverlay');
+        const captureBtn = document.getElementById('captureDocBtn');
+        const useScanBtn = document.getElementById('useScanResultBtn');
+        const retakeBtn = document.getElementById('retakeScanBtn');
 
-        // Hide video and detection overlay
         video.style.display = 'none';
-        if (overlay) overlay.style.display = 'none';
-        
-        // Show preview
+        overlay.style.display = 'none';
         previewContainer.style.display = 'flex';
-        previewImage.style.display = 'block';
         
-        // Update buttons
         captureBtn.style.display = 'none';
         useScanBtn.style.display = 'block';
         retakeBtn.style.display = 'block';
     }
 
     resetModalState() {
-        const video = document.getElementById('cameraVideo');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        const captureBtn = document.getElementById('captureBtn');
-        const useScanBtn = document.getElementById('useScanBtn');
-        const retakeBtn = document.getElementById('retakeBtn');
-        const overlay = document.querySelector('.detection-overlay');
+        const video = document.getElementById('scannerVideo');
+        const previewContainer = document.getElementById('scannerPreviewContainer');
+        const overlay = document.getElementById('scannerDetectionOverlay');
+        const captureBtn = document.getElementById('captureDocBtn');
+        const useScanBtn = document.getElementById('useScanResultBtn');
+        const retakeBtn = document.getElementById('retakeScanBtn');
 
-        // Show video, hide preview
         video.style.display = 'block';
-        if (overlay) overlay.style.display = 'block';
+        overlay.style.display = 'block';
         previewContainer.style.display = 'none';
-        previewImage.style.display = 'none';
         
-        // Reset buttons
         captureBtn.style.display = 'block';
-        captureBtn.style.background = '#28a745';
-        captureBtn.style.boxShadow = 'none';
         useScanBtn.style.display = 'none';
         retakeBtn.style.display = 'none';
         
-        // Reset detection state
         this.documentDetected = false;
         this.detectedCorners = null;
     }
@@ -1298,83 +1272,49 @@ class DocumentScanner {
         this.resetModalState();
         this.capturedImageData = null;
         
-        // Clear preview image URL
-        const previewImage = document.getElementById('previewImage');
+        const previewImage = document.getElementById('scannerPreviewImage');
         if (previewImage.src.startsWith('blob:')) {
             URL.revokeObjectURL(previewImage.src);
         }
         
-        // Restart detection
-        const video = document.getElementById('cameraVideo');
+        const video = document.getElementById('scannerVideo');
         this.startDocumentDetection(video);
     }
 
     useCapturedDocument() {
-        if (this.capturedImageData && this.currentUploadTarget) {
+        if (this.capturedImageData) {
             const file = new File([this.capturedImageData], 'scanned-document.jpg', {
                 type: 'image/jpeg'
             });
             
-            this.processFile(file, this.currentUploadTarget, true);
-            this.closeCamera();
+            if (this.onDocumentScanned) {
+                this.onDocumentScanned(file, 'camera');
+            }
+            
+            this.close();
         }
     }
 
-    closeCamera() {
-        // Stop detection loop
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
-        
-        // Stop camera stream
-        if (this.currentStream) {
-            this.currentStream.getTracks().forEach(track => track.stop());
-            this.currentStream = null;
-        }
-        
-        // Clear preview image URL
-        const previewImage = document.getElementById('previewImage');
-        if (previewImage.src.startsWith('blob:')) {
-            URL.revokeObjectURL(previewImage.src);
-        }
-        
-        // Hide modal
-        document.getElementById('cameraModal').style.display = 'none';
-        this.currentUploadTarget = null;
-        this.capturedImageData = null;
-        this.documentDetected = false;
-        this.detectedCorners = null;
+    showFileUpload() {
+        document.getElementById('fileUploadInput').click();
     }
 
     handleFileSelect(e) {
         const file = e.target.files[0];
-        const target = e.target.dataset.target;
-        
-        if (file) {
-            this.processFile(file, target);
+        if (file && this.validateFile(file)) {
+            if (this.onDocumentScanned) {
+                this.onDocumentScanned(file, 'upload');
+            }
+            this.close();
         }
-    }
-
-    processFile(file, target, isScanned = false) {
-        if (!this.validateFile(file)) {
-            return;
-        }
-
-        this.showLoading(target);
-        
-        setTimeout(() => {
-            this.showUploadedFile(file, target, isScanned);
-            this.hideLoading(target);
-        }, 1500);
     }
 
     validateFile(file) {
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 10 * 1024 * 1024; // 10MB
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
         
         if (file.size > maxSize) {
-            alert('File size must be less than 5MB');
+            alert('File size must be less than 10MB');
             return false;
         }
         
@@ -1386,147 +1326,85 @@ class DocumentScanner {
         return true;
     }
 
-    showLoading(target) {
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const loading = document.querySelector(`[data-loading="${target}"]`);
-        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
-        
-        uploadArea.style.display = 'none';
-        uploadedFile.classList.remove('show');
-        loading.style.display = 'block';
-    }
-
-    hideLoading(target) {
-        const loading = document.querySelector(`[data-loading="${target}"]`);
-        loading.style.display = 'none';
-    }
-
-    showUploadedFile(file, target, isScanned = false) {
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
-        const fileName = uploadedFile.querySelector('.file-name');
-        const fileSize = uploadedFile.querySelector('.file-size');
-        
-        fileName.textContent = `${fileName.textContent} ${file.name}${isScanned ? ' (AI Scanned)' : ''}`;
-        fileSize.textContent = this.formatFileSize(file.size);
-        
-        uploadArea.style.display = 'none';
-        uploadedFile.classList.add('show');
-        
-        uploadedFile.dataset.fileData = URL.createObjectURL(file);
-        uploadedFile.dataset.fileName = file.name;
-        uploadedFile.dataset.fileSize = file.size;
-    }
-
-    removeFile(e) {
-        const uploadedFile = e.target.closest('.uploaded-file');
-        const target = uploadedFile.dataset.file;
-        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
-        const fileName = uploadedFile.querySelector('.file-name');
-        
-        if (uploadedFile.dataset.fileData && uploadedFile.dataset.fileData.startsWith('blob:')) {
-            URL.revokeObjectURL(uploadedFile.dataset.fileData);
+    close() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
         }
         
-        const fileInput = uploadArea.querySelector('.file-input');
-        fileInput.value = '';
-        
-        uploadedFile.classList.remove('show');
-        uploadArea.style.display = 'block';
-        
-        const originalIcon = fileName.textContent.split(' ')[0];
-        fileName.textContent = originalIcon;
-        
-        delete uploadedFile.dataset.fileData;
-        delete uploadedFile.dataset.fileName;
-        delete uploadedFile.dataset.fileSize;
-    }
-
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    getUploadedFiles() {
-        const files = {};
-        document.querySelectorAll('.uploaded-file.show').forEach(element => {
-            const target = element.dataset.file;
-            files[target] = {
-                data: element.dataset.fileData,
-                name: element.dataset.fileName,
-                size: element.dataset.fileSize
-            };
-        });
-        return files;
-    }
-
-    validateAllUploads() {
-        const requiredUploads = ['birth-cert', 'report-card', 'id-photo', 'moral-cert'];
-        const uploadedFiles = this.getUploadedFiles();
-        
-        const missing = requiredUploads.filter(req => !uploadedFiles[req]);
-        
-        if (missing.length > 0) {
-            const missingNames = {
-                'birth-cert': 'Birth Certificate',
-                'report-card': 'Report Card',
-                'id-photo': 'ID Photo',
-                'moral-cert': 'Good Moral Certificate'
-            };
-            
-            const missingList = missing.map(m => missingNames[m]).join(', ');
-            alert(`Please upload the following required documents: ${missingList}`);
-            return false;
+        if (this.currentStream) {
+            this.currentStream.getTracks().forEach(track => track.stop());
+            this.currentStream = null;
         }
         
-        return true;
+        const previewImage = document.getElementById('scannerPreviewImage');
+        if (previewImage.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImage.src);
+        }
+        
+        this.modal.style.display = 'none';
+        this.capturedImageData = null;
+        this.documentDetected = false;
+        this.detectedCorners = null;
+        this.onDocumentScanned = null;
+    }
+
+    // Static method to create global instance
+    static createGlobalInstance() {
+        if (!window.universalDocumentScanner) {
+            window.universalDocumentScanner = new UniversalDocumentScanner();
+        }
+        return window.universalDocumentScanner;
     }
 }
 
-// Initialize when DOM and OpenCV are ready
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        window.documentScanner = new DocumentScanner();
-        
-        // Update Review Application button
-        const reviewBtn = document.querySelector('.btn-primary');
-        if (reviewBtn) {
-            reviewBtn.addEventListener('click', (e) => {
-                if (!window.documentScanner.validateAllUploads()) {
-                    e.preventDefault();
-                    return false;
-                }
-                console.log('All documents uploaded successfully!');
-                console.log('Files:', window.documentScanner.getUploadedFiles());
-            });
-        }
-    } catch (error) {
-        console.error('Failed to initialize document scanner:', error);
-        alert('Document scanner failed to load. File upload will still work.');
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        UniversalDocumentScanner.createGlobalInstance();
+    });
+} else {
+    UniversalDocumentScanner.createGlobalInstance();
+}
+
+// Usage Examples:
+/*
+// Basic usage - open scanner
+window.universalDocumentScanner.open({
+    onDocumentScanned: (file, source) => {
+        console.log('Document scanned:', file.name, 'Source:', source);
+        // Handle the scanned file here
     }
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.documentScanner) {
-        if (window.documentScanner.currentStream) {
-            window.documentScanner.currentStream.getTracks().forEach(track => track.stop());
+// Add button to open scanner anywhere on your page
+const openScannerBtn = document.createElement('button');
+openScannerBtn.textContent = '📄 Scan Document';
+openScannerBtn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+`;
+
+openScannerBtn.addEventListener('click', () => {
+    window.universalDocumentScanner.open({
+        onDocumentScanned: (file, source) => {
+            console.log(`Document ${file.name} scanned via ${source}`);
+            // Your file handling code here
         }
-        
-        if (window.documentScanner.animationId) {
-            cancelAnimationFrame(window.documentScanner.animationId);
-        }
-        
-        document.querySelectorAll('.uploaded-file').forEach(element => {
-            if (element.dataset.fileData && element.dataset.fileData.startsWith('blob:')) {
-                URL.revokeObjectURL(element.dataset.fileData);
-            }
-        });
-    }
+    });
 });
-   </script>
+
+document.body.appendChild(openScannerBtn);
+*/</script>
 </body>
 </html>
