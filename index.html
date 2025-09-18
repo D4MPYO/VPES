@@ -1,117 +1,296 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VPES SIMS - Online Admission System</title>
-  <link rel="stylesheet" href="home.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPES SIMS - Online Admission System</title>
+    <link rel="stylesheet" href="CSS/landingPage.css">
+
 </head>
 <body>
-  <div class="prototype-container">
-    <div class="wireframe-section">
-      <div class="wireframe" data-screen="Home Page">
-        <div class="nav-bar">
-          <div class="logo">🏫 VPES SIMS</div>
-          <div class="nav-links">
-            <a href="#" class="nav-link">Home</a>
-            <a href="#" class="nav-link">About</a>
-            <a href="#" class="nav-link">Requirements</a>
-            <a href="#" class="nav-link">Contact</a>
-            
-            <!-- Guest Navigation (shown when not logged in) -->
-            <div id="guestNavigation" class="guest-nav">
-              <a href="./login.html?mode=login" id="loginBtn" class="nav-link">Login</a>
-              <a href="./login.html?mode=signup" id="enrollBtn" class="nav-link primary">Enroll Now</a>
-            </div>
+    <header class="header">
+        <div class="container">
+            <nav class="nav-container">
+                <div class="logo">
+                    <img src="Images/logo.png" alt="VPES Logo">
+                    <span>VPES SIMS</span>
+                </div>
 
-            <!-- Authenticated Navigation (shown when logged in) -->
-            <div id="authenticatedNavigation" class="auth-nav" style="display: none;">
-              <div id="userProfile" class="user-profile">
-                <span class="user-info">
-                  <span id="userName">User</span>
-                  <span id="userEmail" class="user-email">user@email.com</span>
-                </span>
-              </div>
-              <button id="logoutBtn" class="nav-link danger">Logout</button>
-            </div>
-          </div>
+                <ul class="nav-menu">
+                    <li><a href="#Home" class="nav-link">Home</a></li>
+                    <li><a href="#About" class="nav-link">About</a></li>
+                    <li><a href="#Requirements" class="nav-link">Requirements</a></li>
+                    <li><a href="#" class="nav-link">View Dashboard</a></li>
+                </ul>
+
+                <!-- Guest Navigation -->
+                <div id="guestNavigation" class="enroll-btn-container">
+                    <a href="#" id="loginBtn" class="nav-link login-btn">Login</a>
+                    <a href="#" id="enrollBtn" class="enroll-btn">Enroll Now</a>
+                </div>
+
+                <!-- Authenticated Navigation -->
+                <div id="authenticatedNavigation" class="auth-nav" style="display: none;">
+                    <div id="userProfile" class="user-profile">
+                        <div class="user-info">
+                            <span id="userName">User</span>
+                            <span id="userEmail" class="user-email">user@example.com</span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="nav-link danger">Logout</button>
+                </div>
+
+                <!-- Hamburger Menu -->
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </nav>
         </div>
+    </header>
 
-        <!-- Welcome Message (changes based on auth status) -->
-        <div class="hero">
-          <div id="welcomeMessage">
-            <h2>Welcome to VPES Online Admission</h2>
-            <p>Apply for admission to Vinzons Pilot Elementary School online - fast, convenient, and secure!</p>
-          </div>
-          
-<!-- Guest Action Buttons -->
-<div id="guestActions" class="guest-actions">
-  <button id="startApplicationBtn" class="button primary">🚀 Start Application</button>
-  <button class="button secondary">📋 Check Requirements</button>
-</div>
-
-
-          <!-- Authenticated Action Buttons -->
-          <div id="authenticatedActions" class="auth-actions" style="display: none;">
-            <button class="button primary">🚀 Continue Application</button>
-            <button class="button secondary">📊 View Dashboard</button>
-            <button class="button secondary">📋 My Documents</button>
-          </div>
-        </div>
-
-        <!-- Features Grid -->
-        <div class="features-grid">
-          <div class="dashboard-card">
-            <h3>✨ Easy Application</h3>
-            <p>Fill out forms online anytime, anywhere</p>
-          </div>
-          <div class="dashboard-card">
-            <h3>📱 Track Status</h3>
-            <p>Monitor your application progress in real-time</p>
-          </div>
-          <div class="dashboard-card">
-            <h3>📄 Upload Documents</h3>
-            <p>Submit required documents digitally</p>
-          </div>
-        </div>
-
-        <!-- Enrollment Prompts for Guests -->
-        <div class="enroll-prompt" id="enrollmentPromo" style="display: none;">
-          <!-- Content will be dynamically inserted by JavaScript -->
-        </div>
-
-        <!-- Auth-required content (only visible to logged-in users) -->
-        <div class="auth-required" id="authenticatedContent" style="display: none;">
-          <div class="dashboard-section">
-            <h3>Your Application Status</h3>
-            <div class="status-card">
-              <p>Application in progress...</p>
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: 60%"></div>
-              </div>
-              <small>60% Complete</small>
-            </div>
-          </div>
-
-          <div class="dashboard-section">
-            <h3>Quick Actions</h3>
-            <div class="quick-actions">
-              <button class="button secondary">📝 Edit Application</button>
-              <button class="button secondary">📎 Upload Documents</button>
-              <button class="button secondary">📧 Contact Admissions</button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Messages Container -->
+    <div class="messages-container" style="position: fixed; top: 80px; right: 20px; z-index: 1001; width: 350px;">
+        <div id="loading" class="loading message"></div>
+        <div id="errorMessage" class="message error-message"></div>
+        <div id="successMessage" class="message success-message"></div>
     </div>
-  </div>
 
-  <!-- Notification areas -->
-  <div id="loading" class="loading-overlay" style="display: none;"></div>
-  <div id="errorMessage" class="notification error" style="display: none;"></div>
-  <div id="successMessage" class="notification success" style="display: none;"></div>
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <ul class="mobile-nav-menu">
+                <li><a href="#Home" class="mobile-nav-link">Home</a></li>
+                <li><a href="#About" class="mobile-nav-link">About</a></li>
+                <li><a href="#Requirements" class="mobile-nav-link">Requirements</a></li>
+                <li><a href="#" class="mobile-nav-link">View Dashboard</a></li>
+                
+                <!-- Mobile Guest Navigation -->
+                <div id="mobileGuestNavigation" class="mobile-auth-section">
+                    <li><a href="#" id="mobileLoginBtn" class="mobile-nav-link">Login</a></li>
+                    <li><a href="#" id="mobileEnrollBtn" class="mobile-enroll-btn">Enroll Now</a></li>
+                </div>
 
-  <script type="module" src="home.js"></script>
+                <!-- Mobile Authenticated Navigation -->
+                <div id="mobileAuthenticatedNavigation" class="mobile-auth-section" style="display: none;">
+                    <li class="mobile-user-profile">
+                        <div class="mobile-user-info">
+                            <span id="mobileUserName" class="mobile-user-name">User</span>
+                            <span id="mobileUserEmail" class="mobile-user-email">user@example.com</span>
+                        </div>
+                    </li>
+                    <li><button id="mobileLogoutBtn" class="mobile-logout-btn">Logout</button></li>
+                </div>
+            </ul>
+        </div>
+    </div>
+    
+    <main id="Home">
+        <section class="main-content">
+            <h1 class="main-title">Welcome to VPES Student Information Management System</h1>
+            <p class="main-subtitle">
+                Apply for admission to Vinzons Pilot Elementary School online - fast, convenient, and secure!
+            </p>
+            
+            <div id="welcomeMessage" class="welcome-section" style="display: none;">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="#" id="startApplicationBtn" class="btn-primary">
+                    ✏️ START APPLICATION
+                </a>
+                <a href="#Requirements" class="btn-secondary">
+                    📋 CHECK REQUIREMENTS
+                </a>
+            </div>
+        </section>
+        
+        <section class="features">
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3 class="feature-title">Easy Application</h3>
+                <p class="feature-description">
+                    Fill out forms online anytime, anywhere
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">📱</span>
+                <h3 class="feature-title">Track Status</h3>
+                <p class="feature-description">
+                    Monitor your application progress in real-time
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">📄</span>
+                <h3 class="feature-title">Upload Documents</h3>
+                <p class="feature-description">
+                    Submit required documents digitally
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- ABOUT SECTION -->
+    <section id="About" class="about-section">
+        <div class="container about-container">
+            <div class="about-image">
+                <img src="Images/schoolview.jpg" alt="School">
+            </div>
+            <div class="about-content">
+                <h2 class="about-title">About Our School</h2>
+                <h3 class="about-subtitle">Excellence in Education Since 2025</h3>
+                <p class="about-text">
+                    Vinzons Pilot Elementary School (VPES) is a premier educational institution committed to
+                    providing quality education that nurtures intellectual, physical, and emotional growth of our students.
+                </p>
+                <p class="about-text">
+                    Our state-of-the-art facilities and dedicated faculty ensure that students receive the
+                    best possible education in a supportive and stimulating environment.
+                </p>
+
+                <div class="about-features">
+                    <div class="about-feature">
+                        🎓 <span>Quality Education</span>
+                    </div>
+                    <div class="about-feature">
+                        👩‍🏫 <span>Expert Faculty</span>
+                    </div>
+                    <div class="about-feature">
+                        🔬 <span>Modern Labs</span>
+                    </div>
+                    <div class="about-feature">
+                        ⚽ <span>Sports Facilities</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- REQUIREMENTS SECTION -->
+    <section id="Requirements" class="requirements-section">
+        <div class="container">
+            <h2 class="requirements-title">Enrollment Requirements</h2>
+            <p class="requirements-subtitle">
+                Please review the requirements below for Kindergarten and Grade 1 enrollment.
+            </p>
+            
+            <div class="requirements-table">
+                <div class="table-header">
+                    <div>LEVEL</div>
+                    <div>ELIGIBILITY CONSIDERATIONS</div>
+                    <div>DOCUMENTARY REQUIREMENTS</div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="level-cell">Kindergarten</div>
+                    <div class="eligibility-cell">
+                        Shall be based on the existing Kindergarten Education Policy
+                    </div>
+                    <div class="documents-cell">
+                        Original or Certified True Copy of PSA Birth Certificate or <span class="highlight-text">ANY</span> of the Secondary Documents:
+                        
+                    </div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="level-cell" style="border-right: 1px solid #e5e7eb;">Grade 1</div>
+                    <div class="eligibility-cell">
+                        Children who have completed Kindergarten Programs in DepEd-authorized schools and centers
+                    </div>
+                    <div class="documents-cell">
+                        <ul>
+                            <li>Kindergarten Certificate of Completion</li>
+                            <li>PSA Birth Certificate, only for enrollees who did not submit birth certificates during kindergarten, or <span class="highlight-text">ANY</span> of the Secondary Documents</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="table-row">
+                    <div class="level-cell" style="border-right: 1px solid #e5e7eb;">Grade 1</div>
+                    <div class="eligibility-cell">
+                        Children who have completed any form of Kindergarten Program in non-DepEd authorized learning centers (i.e., Day Care Centers or Home-Schooled Learning Provider)
+                    </div>
+                    <div class="documents-cell">
+                        <ul>
+                            <li>PEPT Certificate of Rating</li>
+                            <li>PSA or NSO Birth Certificate or any of the Secondary Documents</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="table-row">
+                    <div class="level-cell">Grades 2 to 6</div>
+                    <div class="eligibility-cell">
+                        Completion of the last grade level attended
+                    </div>
+                    <div class="documents-cell">
+                        SF 9 (Report Card) of the last grade level completed
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <img src="Images/logo.png" alt="VPES Logo">
+                <h3>Vinzons Pilot Elementary School</h3>
+                <p>Providing quality education that nurtures intellectual, physical, and emotional growth of our students since 2025.</p>
+            </div>
+            
+            <div class="footer-links">
+                <h3>Quick Links</h3>
+                <a href="#Home">Home</a>
+                <a href="#About">About</a>
+                <a href="#Requirements">Requirements</a>
+                <a href="#">Enroll Now</a>
+                <a href="#">View Dashboard</a>
+            </div>
+            
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                
+                <div class="contact-item">
+                    <span class="contact-icon">📧</span>
+                    <a href="mailto:vpes.sims@gmail.com">vpes.sims@gmail.com</a>
+                </div>
+                
+                <div class="contact-item">
+                    <span class="contact-icon">📞</span>
+                    <a href="tel:+639123456789">+63 912 345 6789</a>
+                </div>
+                
+                <div class="contact-item">
+                    <span class="contact-icon">📍</span>
+                    <span>Vinzons, Camarines Norte, Philippines</span>
+                </div>
+
+                <div class="social-links">
+                    <a href="https://facebook.com/vpes.sims" class="social-link" target="_blank" title="Follow us on Facebook">
+                        📘
+                    </a>
+                    <a href="mailto:vpes.sims@gmail.com" class="social-link" title="Email us">
+                        📧
+                    </a>
+                    <a href="tel:+639123456789" class="social-link" title="Call us">
+                        📞
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 Vinzons Pilot Elementary School. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script type="module" src="JS/landingPage.js"></script>
+
 </body>
 </html>
-
