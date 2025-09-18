@@ -850,35 +850,50 @@ body {
     }
 
 
-        .about-container {
-        grid-template-columns: 1fr; /* stack vertically */
-        gap: 20px;
-        justify-items: center; /* ensure content is centered */
+        .about-section {
+        padding: 60px 15px; /* reduce padding for mobile */
+    }
+
+    .about-container {
+        grid-template-columns: 1fr;
+        gap: 25px;
+        justify-items: center;
+        text-align: center;
     }
 
     .about-image img {
-        width: 90%; /* scale down the image */
-        max-width: 400px;
+        width: 100%;
+        max-width: 320px; /* prevent image from being too large */
+        margin: 0 auto;
+        display: block;
     }
 
     .about-content {
-        text-align: center; /* center text */
-        padding: 0 10px;
-    }
-
-    .about-features {
-        grid-template-columns: 1fr 1fr; /* smaller grid for features */
-        gap: 15px;
+        padding: 0 15px;
     }
 
     .about-title {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
     }
 
     .about-subtitle {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
 
+    .about-text {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .about-features {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .about-feature {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
 
 
 
