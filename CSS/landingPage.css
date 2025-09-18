@@ -503,6 +503,11 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 40px;
     align-items: center;
+    justify-items: center; /* ADD THIS */
+}
+
+.about-content {
+    text-align: center; /* ADD THIS for mobile */
 }
 
 .about-image img {
@@ -843,6 +848,40 @@ body {
     .table-header {
         text-align: center;
     }
+
+
+        .about-container {
+        grid-template-columns: 1fr; /* stack vertically */
+        gap: 20px;
+        justify-items: center; /* ensure content is centered */
+    }
+
+    .about-image img {
+        width: 90%; /* scale down the image */
+        max-width: 400px;
+    }
+
+    .about-content {
+        text-align: center; /* center text */
+        padding: 0 10px;
+    }
+
+    .about-features {
+        grid-template-columns: 1fr 1fr; /* smaller grid for features */
+        gap: 15px;
+    }
+
+    .about-title {
+        font-size: 1.8rem;
+    }
+
+    .about-subtitle {
+        font-size: 1.3rem;
+    }
+
+
+
+
 
     .requirements-table {
         margin: 20px 10px;
