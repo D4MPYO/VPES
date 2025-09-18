@@ -7,6 +7,7 @@ class DocumentUploader {
 
     init() {
         this.setupEventListeners();
+        this.loadSavedDocuments();
     }
 
     setupEventListeners() {
@@ -106,21 +107,86 @@ class DocumentUploader {
         }
     }
 
-    processFile(file, target) {
+    async processFile(file, target) {
         if (!this.validateFile(file, target)) return;
 
         this.showLoading(target);
         
-        // Create URL for file preview
-        const fileURL = URL.createObjectURL(file);
-        this.fileURLs.set(target, fileURL);
-        
-        // Simulate processing time
-        setTimeout(() => {
+        try {
+            // Convert file to Base64 for storage
+            const base64Data = await this.fileToBase64(file);
+            
+            // Store file data in sessionStorage
+            const fileData = {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: base64Data,
+                uploadDate: new Date().toISOString()
+            };
+            
+            // Try to store in sessionStorage
+            try {
+                sessionStorage.setItem(`document_${target}`, JSON.stringify(fileData));
+            } catch (e) {
+                // If storage quota exceeded, show warning
+                console.warn('Storage quota exceeded, file too large for session storage');
+                this.showAlert('File uploaded successfully but may not persist if you leave the site (file too large for browser storage)', 'warning');
+            }
+            
+            // Create blob and URL for immediate use
+            const blob = await this.base64ToBlob(base64Data, file.type);
+            const fileURL = URL.createObjectURL(blob);
+            
+            this.fileURLs.set(target, fileURL);
             this.uploadedFiles.set(target, file);
-            this.showUploadedFile(file, target);
+            
+            // Show uploaded file
+            setTimeout(() => {
+                this.showUploadedFile(file, target);
+                this.hideLoading(target);
+                this.saveDocumentStatus();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error processing file:', error);
             this.hideLoading(target);
-        }, 1500);
+            this.showAlert('Error processing file. Please try again.', 'error');
+        }
+    }
+
+    // Convert file to Base64
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // Convert Base64 back to Blob
+    base64ToBlob(base64Data, contentType) {
+        return new Promise((resolve, reject) => {
+            try {
+                // Remove data URL prefix if present
+                const base64 = base64Data.replace(/^data:.*?;base64,/, '');
+                
+                // Decode base64
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: contentType });
+                resolve(blob);
+            } catch (error) {
+                reject(error);
+            }
+        });
     }
 
     validateFile(file, target) {
@@ -163,18 +229,36 @@ class DocumentUploader {
             container.insertBefore(alertEl, firstCard);
         }
 
-        alertEl.className = `upload-alert alert alert-${type === 'error' ? 'danger' : 'info'}`;
+        // Map type to appropriate styling
+        const typeMap = {
+            'error': 'danger',
+            'warning': 'warning',
+            'success': 'success',
+            'info': 'info'
+        };
+
+        alertEl.className = `upload-alert alert alert-${typeMap[type] || 'info'}`;
+        
+        // Choose appropriate icon
+        const icons = {
+            'error': '⚠️',
+            'warning': '⚠️',
+            'success': '✅',
+            'info': 'ℹ️'
+        };
+        
         alertEl.innerHTML = `
-            <span class="alert-icon">${type === 'error' ? '⚠️' : 'ℹ️'}</span>
+            <span class="alert-icon">${icons[type] || 'ℹ️'}</span>
             <div>${message}</div>
         `;
 
-        // Auto-remove after 5 seconds
+        // Auto-remove after 5 seconds (longer for warnings)
+        const timeout = type === 'warning' ? 8000 : 5000;
         setTimeout(() => {
             if (alertEl && alertEl.parentNode) {
                 alertEl.remove();
             }
-        }, 5000);
+        }, timeout);
     }
 
     showLoading(target) {
@@ -227,12 +311,16 @@ class DocumentUploader {
         }
         
         this.uploadedFiles.delete(target);
+        
+        // Remove from sessionStorage
+        sessionStorage.removeItem(`document_${target}`);
 
         // Clear file input
         const fileInput = document.querySelector(`[data-target="${target}"]`);
         if (fileInput) fileInput.value = '';
 
         this.showAlert('File removed successfully', 'info');
+        this.saveDocumentStatus();
     }
 
     viewDocument(e) {
@@ -241,14 +329,38 @@ class DocumentUploader {
         this.showDocumentPreview(target);
     }
 
-    showDocumentPreview(target) {
-        if (!this.uploadedFiles.has(target)) {
-            this.showAlert('No document found to preview.', 'error');
-            return;
+    async showDocumentPreview(target) {
+        // First check if we have it in memory
+        let fileURL = this.fileURLs.get(target);
+        let file = this.uploadedFiles.get(target);
+        
+        // If not in memory, try to load from sessionStorage
+        if (!fileURL) {
+            const storedData = sessionStorage.getItem(`document_${target}`);
+            if (storedData) {
+                try {
+                    const fileData = JSON.parse(storedData);
+                    const blob = await this.base64ToBlob(fileData.data, fileData.type);
+                    fileURL = URL.createObjectURL(blob);
+                    this.fileURLs.set(target, fileURL);
+                    
+                    // Create a file-like object for display
+                    file = {
+                        name: fileData.name,
+                        type: fileData.type,
+                        size: fileData.size
+                    };
+                } catch (error) {
+                    console.error('Error loading stored document:', error);
+                    this.showAlert('Error loading document. Please re-upload.', 'error');
+                    return;
+                }
+            } else {
+                this.showAlert('No document found to preview.', 'error');
+                return;
+            }
         }
 
-        const file = this.uploadedFiles.get(target);
-        const fileURL = this.fileURLs.get(target);
         const modal = document.getElementById('viewModal');
         const title = document.getElementById('viewTitle');
         const preview = document.getElementById('documentPreview');
@@ -365,34 +477,109 @@ class DocumentUploader {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // Get upload status for form validation
-    getUploadStatus() {
-        return {
-            birthCert: this.uploadedFiles.has('birth-cert'),
-            reportCard: this.uploadedFiles.has('report-card'),
-            idPhoto: this.uploadedFiles.has('id-photo'),
-            moralCert: this.uploadedFiles.has('moral-cert'),
-            totalUploaded: this.uploadedFiles.size
+    // Save document upload status to sessionStorage
+    saveDocumentStatus() {
+        const status = {
+            birthCert: this.uploadedFiles.has('birth-cert') || sessionStorage.getItem('document_birth-cert') !== null,
+            reportCard: this.uploadedFiles.has('report-card') || sessionStorage.getItem('document_report-card') !== null,
+            idPhoto: this.uploadedFiles.has('id-photo') || sessionStorage.getItem('document_id-photo') !== null,
+            moralCert: this.uploadedFiles.has('moral-cert') || sessionStorage.getItem('document_moral-cert') !== null,
+            timestamp: new Date().toISOString()
         };
+        
+        status.totalUploaded = [status.birthCert, status.reportCard, status.idPhoto, status.moralCert].filter(Boolean).length;
+        
+        // Store which documents still need to be submitted
+        const pendingDocuments = [];
+        if (!status.birthCert) pendingDocuments.push('Birth Certificate');
+        if (!status.idPhoto) pendingDocuments.push('ID Photo (2x2)');
+        
+        status.pendingDocuments = pendingDocuments;
+        status.hasAllRequired = pendingDocuments.length === 0;
+        
+        sessionStorage.setItem('documentUploadStatus', JSON.stringify(status));
+        sessionStorage.setItem('documentsUploaded', 'partial');
     }
 
-    // Validate required documents before proceeding
-    validateRequiredDocuments() {
-        const status = this.getUploadStatus();
-        const required = ['birthCert', 'idPhoto']; // Birth cert and ID photo are always required
-        
-        for (let doc of required) {
-            if (!status[doc]) {
-                const docNames = {
-                    birthCert: 'Birth Certificate',
-                    idPhoto: 'ID Photo'
-                };
-                this.showAlert(`${docNames[doc]} is required before proceeding.`, 'error');
-                return false;
+    // Load saved documents from sessionStorage
+    async loadSavedDocuments() {
+        const documents = [
+            { key: 'birth-cert', name: 'Birth Certificate' },
+            { key: 'report-card', name: 'Report Card' },
+            { key: 'id-photo', name: 'ID Photo' },
+            { key: 'moral-cert', name: 'Good Moral Certificate' }
+        ];
+
+        for (const doc of documents) {
+            const storedData = sessionStorage.getItem(`document_${doc.key}`);
+            if (storedData) {
+                try {
+                    const fileData = JSON.parse(storedData);
+                    
+                    // Recreate the file object
+                    const blob = await this.base64ToBlob(fileData.data, fileData.type);
+                    const file = new File([blob], fileData.name, { type: fileData.type });
+                    
+                    // Create URL for preview
+                    const fileURL = URL.createObjectURL(blob);
+                    
+                    // Store in memory
+                    this.uploadedFiles.set(doc.key, file);
+                    this.fileURLs.set(doc.key, fileURL);
+                    
+                    // Show as uploaded
+                    this.showRestoredFile(fileData, doc.key);
+                    
+                } catch (error) {
+                    console.error(`Error loading ${doc.name}:`, error);
+                    // Remove corrupted data
+                    sessionStorage.removeItem(`document_${doc.key}`);
+                }
             }
+        }
+    }
+
+    // Show restored file from sessionStorage
+    showRestoredFile(fileData, target) {
+        const uploadedEl = document.querySelector(`[data-file="${target}"]`);
+        const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const fileNameEl = uploadedEl?.querySelector('.file-name');
+        const fileSizeEl = uploadedEl?.querySelector('.file-size');
+
+        if (uploadedEl && fileNameEl) {
+            fileNameEl.textContent = `✅ ${fileData.name}`;
+            if (fileSizeEl) fileSizeEl.textContent = this.formatFileSize(fileData.size);
+            
+            uploadedEl.classList.add('show');
+            if (uploadArea) uploadArea.style.display = 'none';
+        }
+    }
+
+    // Check if user wants to proceed without all documents
+    proceedWithMissingDocuments() {
+        const status = this.getUploadStatus();
+        const missingDocs = [];
+        
+        // Check which important documents are missing
+        if (!status.birthCert) missingDocs.push('Birth Certificate');
+        if (!status.idPhoto) missingDocs.push('ID Photo');
+        
+        if (missingDocs.length > 0) {
+            const message = `You haven't uploaded the following document(s):\n\n${missingDocs.join('\n')}\n\nYou can still proceed with your application, but these documents must be submitted within 30 days.\n\nDo you want to continue?`;
+            return confirm(message);
         }
         
         return true;
+    }
+
+    // Get upload status for validation
+    getUploadStatus() {
+        return {
+            birthCert: this.uploadedFiles.has('birth-cert') || sessionStorage.getItem('document_birth-cert') !== null,
+            reportCard: this.uploadedFiles.has('report-card') || sessionStorage.getItem('document_report-card') !== null,
+            idPhoto: this.uploadedFiles.has('id-photo') || sessionStorage.getItem('document_id-photo') !== null,
+            moralCert: this.uploadedFiles.has('moral-cert') || sessionStorage.getItem('document_moral-cert') !== null
+        };
     }
 }
 
@@ -400,30 +587,43 @@ class DocumentUploader {
 document.addEventListener('DOMContentLoaded', () => {
     const uploader = new DocumentUploader();
     
-    // Add validation to next button
+    // Modify next button behavior to allow proceeding without all documents
     const nextButton = document.querySelector('.button-primary');
     if (nextButton) {
+        // Remove the default onclick
+        nextButton.removeAttribute('onclick');
+        
         nextButton.addEventListener('click', (e) => {
-            if (nextButton.getAttribute('onclick')) {
-                // Remove onclick temporarily to add validation
-                const originalOnclick = nextButton.getAttribute('onclick');
-                nextButton.removeAttribute('onclick');
-                
-                nextButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (uploader.validateRequiredDocuments()) {
-                        // Proceed to next page
-                        eval(originalOnclick);
-                    }
-                });
+            e.preventDefault();
+            
+            // Save the current upload status
+            uploader.saveDocumentStatus();
+            
+            // Ask for confirmation if documents are missing
+            if (uploader.proceedWithMissingDocuments()) {
+                // Proceed to next page
+                window.location.href = 'review.html';
             }
+        });
+    }
+    
+    // Previous button functionality
+    const prevButton = document.querySelector('.button-secondary');
+    if (prevButton) {
+        prevButton.removeAttribute('onclick');
+        prevButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Save current status before going back
+            uploader.saveDocumentStatus();
+            window.location.href = 'applicationform.html';
         });
     }
 });
 
 // Clean up URLs when page unloads
 window.addEventListener('beforeunload', () => {
-    // Browser usually handles this automatically, but we can be explicit
+    // Note: File URLs stored in sessionStorage will be recreated when needed
+    // This cleanup is just for the current page session
     document.querySelectorAll('input[type="file"]').forEach(input => {
         if (input.files) {
             Array.from(input.files).forEach(file => {

@@ -122,6 +122,45 @@ class PhilippineLocationSelector {
     }
 }
 
+// Auto-save form data to sessionStorage
+function autoSaveFormData() {
+    const form = document.getElementById('applicationForm');
+    const formData = new FormData(form);
+    const data = {};
+    
+    // Collect all form data
+    for (let [key, value] of formData.entries()) {
+        if (data[key]) {
+            // Handle multiple values (checkboxes with same name)
+            if (Array.isArray(data[key])) {
+                data[key].push(value);
+            } else {
+                data[key] = [data[key], value];
+            }
+        } else {
+            data[key] = value;
+        }
+    }
+    
+    // Also save checkbox states for unchecked boxes
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked && checkbox.name === 'learningModality') {
+            // Track which modalities were considered but not selected
+            if (!data.learningModalityState) {
+                data.learningModalityState = [];
+            }
+            data.learningModalityState.push(checkbox.value + '_unchecked');
+        }
+    });
+    
+    // Save the "same address" checkbox state explicitly
+    data.sameAddressChecked = document.getElementById('sameAddress').checked;
+    
+    // Save to sessionStorage (clears when browser/tab closes)
+    sessionStorage.setItem('applicationFormData', JSON.stringify(data));
+}
+
 // Initialize page when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
     // Initialize location dropdowns
@@ -153,11 +192,13 @@ document.addEventListener("DOMContentLoaded", () => {
             lrnInput.removeAttribute('required');
             lrnInput.placeholder = 'Not Applicable';
             lrnInput.style.backgroundColor = '#f3f4f6';
+            lrnInput.style.borderColor = ''; // Clear any validation styling
         } else {
             lrnInput.disabled = false;
             lrnInput.setAttribute('required', 'required');
             lrnInput.placeholder = '000000000000';
             lrnInput.style.backgroundColor = '';
+            lrnInput.style.borderColor = '';
         }
     }
 
@@ -311,6 +352,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById(id).removeEventListener("change", updatePermanentFromCurrent);
             });
         }
+        
+        // Auto-save after toggle
+        autoSaveFormData();
     }
 
     // Function to update permanent address from current
@@ -354,119 +398,388 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Save Draft function
-    window.saveDraft = function() {
-        const formData = new FormData(document.getElementById('applicationForm'));
-        const data = Object.fromEntries(formData);
-        localStorage.setItem('applicationDraft', JSON.stringify(data));
-        alert('Draft saved successfully!');
-    }
-
-    // Load saved draft if exists
-    const savedDraft = localStorage.getItem('applicationDraft');
-    if (savedDraft) {
-        const data = JSON.parse(savedDraft);
+    // Load saved data from sessionStorage
+    const savedData = sessionStorage.getItem('applicationFormData');
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        
+        // Restore all form fields
         Object.keys(data).forEach(key => {
-            const element = document.querySelector(`[name="${key}"]`);
-            if (element) {
-                if (element.type === 'radio' || element.type === 'checkbox') {
-                    element.checked = element.value === data[key];
-                } else {
-                    element.value = data[key];
-                }
+            if (key === 'sameAddressChecked' || key === 'learningModalityState') {
+                // Skip these special keys
+                return;
             }
+            
+            const elements = document.querySelectorAll(`[name="${key}"]`);
+            
+            elements.forEach(element => {
+                if (element.type === 'radio') {
+                    // For radio buttons, check if value matches
+                    element.checked = element.value === data[key];
+                } else if (element.type === 'checkbox') {
+                    // For checkboxes, check if value is in array or matches
+                    if (Array.isArray(data[key])) {
+                        element.checked = data[key].includes(element.value);
+                    } else {
+                        element.checked = element.value === data[key];
+                    }
+                } else {
+                    // For other inputs
+                    element.value = data[key] || '';
+                }
+            });
         });
         
-        // Check if LRN should be disabled based on saved data
+        // After restoring data, check states
         if (data.withLrn === 'NO') {
             toggleLRNField();
         }
         
-        // Check if returning learner fields should be enabled
         if (data.returning === 'YES') {
             toggleReturningLearnerSection();
         }
+        
+        // Restore same address checkbox state
+        if (data.sameAddressChecked) {
+            document.getElementById('sameAddress').checked = true;
+            // Don't call togglePermanentAddress yet, wait for dropdowns to load
+        }
+        
+        // Trigger location dropdowns if data exists
+        const loadPromises = [];
+        
+        if (data.birthProvince) {
+            loadPromises.push(
+                birthSelector.loadProvinces(data.birthProvince).then(() => {
+                    if (data.birthCity) {
+                        return birthSelector.loadCities(data.birthProvince, data.birthCity);
+                    }
+                })
+            );
+        }
+        
+        if (data.currentProvince) {
+            loadPromises.push(
+                currentSelector.loadProvinces(data.currentProvince).then(() => {
+                    if (data.currentMunicipality) {
+                        return currentSelector.loadCities(data.currentProvince, data.currentMunicipality).then(() => {
+                            if (data.currentBarangay) {
+                                return currentSelector.loadBarangays(data.currentMunicipality, data.currentBarangay);
+                            }
+                        });
+                    }
+                })
+            );
+        }
+        
+        if (data.permProvince && !data.sameAddressChecked) {
+            loadPromises.push(
+                permSelector.loadProvinces(data.permProvince).then(() => {
+                    if (data.permMunicipality) {
+                        return permSelector.loadCities(data.permProvince, data.permMunicipality).then(() => {
+                            if (data.permBarangay) {
+                                return permSelector.loadBarangays(data.permMunicipality, data.permBarangay);
+                            }
+                        });
+                    }
+                })
+            );
+        }
+        
+        // After all dropdowns are loaded, handle same address checkbox
+        Promise.all(loadPromises).then(() => {
+            if (data.sameAddressChecked) {
+                togglePermanentAddress();
+            }
+        });
     }
+
+    // Set up auto-save on any form change
+    const form = document.getElementById('applicationForm');
+    const formElements = form.querySelectorAll('input, select, textarea');
+    
+    formElements.forEach(element => {
+        // Add appropriate event listeners based on element type
+        if (element.type === 'checkbox' || element.type === 'radio') {
+            element.addEventListener('change', autoSaveFormData);
+        } else if (element.tagName === 'SELECT') {
+            element.addEventListener('change', autoSaveFormData);
+        } else {
+            // For text inputs, save on input but debounce to avoid too frequent saves
+            let saveTimeout;
+            element.addEventListener('input', () => {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(autoSaveFormData, 500); // Save after 500ms of no typing
+            });
+        }
+    });
+
+    // Also save when LRN or Returning Learner toggles change
+    document.getElementById('withLrnYes').addEventListener('change', autoSaveFormData);
+    document.getElementById('withLrnNo').addEventListener('change', autoSaveFormData);
+    document.getElementById('returningYes').addEventListener('change', autoSaveFormData);
+    document.getElementById('returningNo').addEventListener('change', autoSaveFormData);
 
     // Form submission handler with validation
     window.handleSubmit = function(event) {
-        event.preventDefault();
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
         
-        // Check if returning learner is selected
-        const returningYes = document.getElementById('returningYes').checked;
+        const form = document.getElementById('applicationForm');
+        let isValid = true;
+        let firstInvalidField = null;
+        let errorMessage = '';
         
-        if (returningYes) {
-            // Validate ALL FOUR required returning learner fields
-            const lastGradeLevel = document.getElementById('lastGradeLevel');
-            const lastSchoolYear = document.getElementById('lastSchoolYear');
-            const lastSchoolAttended = document.getElementById('lastSchoolAttended');
-            const schoolId = document.getElementById('schoolId');
-            
-            let allValid = true;
-            let firstInvalidField = null;
-            
-            // Check each field
-            if (!lastGradeLevel.value) {
-                allValid = false;
-                lastGradeLevel.style.borderColor = 'var(--danger)';
-                if (!firstInvalidField) firstInvalidField = lastGradeLevel;
-            }
-            
-            if (!lastSchoolYear.value) {
-                allValid = false;
-                lastSchoolYear.style.borderColor = 'var(--danger)';
-                if (!firstInvalidField) firstInvalidField = lastSchoolYear;
-            }
-            
-            if (!lastSchoolAttended.value) {
-                allValid = false;
-                lastSchoolAttended.style.borderColor = 'var(--danger)';
-                if (!firstInvalidField) firstInvalidField = lastSchoolAttended;
-            }
-            
-            if (!schoolId.value) {
-                allValid = false;
-                schoolId.style.borderColor = 'var(--danger)';
-                if (!firstInvalidField) firstInvalidField = schoolId;
-            }
-            
-            if (!allValid) {
-                alert('Please complete ALL required fields in the Returning Learner section.');
-                if (firstInvalidField) {
-                    firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    firstInvalidField.focus();
+        // Clear previous error styling
+        document.querySelectorAll('.error-highlight').forEach(el => {
+            el.classList.remove('error-highlight');
+            el.style.borderColor = '';
+            el.style.backgroundColor = '';
+        });
+        
+        // Check all required fields that are not disabled
+        const requiredFields = form.querySelectorAll('[required]:not(:disabled)');
+        
+        requiredFields.forEach(field => {
+            if (!field.value || field.value.trim() === '') {
+                isValid = false;
+                field.style.borderColor = 'var(--danger)';
+                field.classList.add('error-highlight');
+                
+                // Set first invalid field for focus
+                if (!firstInvalidField) {
+                    firstInvalidField = field;
+                    
+                    // Get the field label for better error message
+                    const label = form.querySelector(`label[for="${field.id}"]`);
+                    const fieldName = label ? label.textContent.replace('*', '').trim() : field.name;
+                    
+                    // Determine which section the field is in
+                    if (field.closest('#returningLearnerSection')) {
+                        errorMessage = `Please complete the required field: ${fieldName} (in Returning Learner section)`;
+                    } else if (field.closest('.form-card')) {
+                        const sectionTitle = field.closest('.form-card').querySelector('.form-title')?.textContent.trim();
+                        errorMessage = `Please complete the required field: ${fieldName}${sectionTitle ? ` (in ${sectionTitle} section)` : ''}`;
+                    } else {
+                        errorMessage = `Please complete the required field: ${fieldName}`;
+                    }
                 }
-                return false;
+            }
+        });
+        
+        // Special check for radio button groups
+        const radioGroups = ['withLrn', 'returning', 'sex', 'hasDisability', 'indigenousPeople', 'fourPs'];
+        radioGroups.forEach(groupName => {
+            const checked = form.querySelector(`[name="${groupName}"]:checked`);
+            const firstRadio = form.querySelector(`[name="${groupName}"]`);
+            
+            // Check if this radio group exists and is required
+            if (firstRadio && firstRadio.hasAttribute('required') && !firstRadio.disabled && !checked) {
+                isValid = false;
+                const radioContainer = firstRadio.closest('.radio-group');
+                if (radioContainer) {
+                    radioContainer.style.border = '1px solid var(--danger)';
+                    radioContainer.style.borderRadius = '4px';
+                    radioContainer.style.padding = '4px';
+                }
+                
+                if (!firstInvalidField) {
+                    firstInvalidField = firstRadio;
+                    const label = firstRadio.closest('.form-field')?.querySelector('label');
+                    const fieldName = label ? label.textContent.replace('*', '').trim() : groupName;
+                    errorMessage = `Please select an option for: ${fieldName}`;
+                }
+            }
+        });
+        
+        // Check if LRN is required and filled
+        const withLrnYes = document.getElementById('withLrnYes');
+        const withLrnNo = document.getElementById('withLrnNo');
+        const lrnInput = document.getElementById('lrn');
+        
+        // First check if With LRN is answered
+        if (!withLrnYes.checked && !withLrnNo.checked) {
+            isValid = false;
+            const radioContainer = withLrnYes.closest('.radio-group');
+            if (radioContainer) {
+                radioContainer.style.border = '1px solid var(--danger)';
+                radioContainer.style.borderRadius = '4px';
+                radioContainer.style.padding = '4px';
+            }
+            if (!firstInvalidField) {
+                firstInvalidField = withLrnYes;
+                errorMessage = 'Please select whether the student has an LRN (With LRN?)';
+            }
+        } else if (withLrnYes.checked && (!lrnInput.value || lrnInput.value.trim() === '')) {
+            isValid = false;
+            lrnInput.style.borderColor = 'var(--danger)';
+            lrnInput.classList.add('error-highlight');
+            if (!firstInvalidField) {
+                firstInvalidField = lrnInput;
+                errorMessage = 'Please enter the Learner Reference Number (LRN)';
+            }
+        }
+        
+        // Check if returning learner is answered
+        const returningYes = document.getElementById('returningYes');
+        const returningNo = document.getElementById('returningNo');
+        
+        if (!returningYes.checked && !returningNo.checked) {
+            isValid = false;
+            const radioContainer = returningYes.closest('.radio-group');
+            if (radioContainer) {
+                radioContainer.style.border = '1px solid var(--danger)';
+                radioContainer.style.borderRadius = '4px';
+                radioContainer.style.padding = '4px';
+            }
+            if (!firstInvalidField) {
+                firstInvalidField = returningYes;
+                errorMessage = 'Please select whether the student is a Returning Learner (Balik-Aral)';
+            }
+        } else if (returningYes.checked) {
+            // Check returning learner fields
+            const returningFields = [
+                { id: 'lastGradeLevel', name: 'Last Grade Level Completed' },
+                { id: 'lastSchoolYear', name: 'Last School Year Completed' },
+                { id: 'lastSchoolAttended', name: 'Last School Attended' },
+                { id: 'schoolId', name: 'School ID' }
+            ];
+            
+            returningFields.forEach(fieldInfo => {
+                const field = document.getElementById(fieldInfo.id);
+                if (!field.value || field.value.trim() === '') {
+                    isValid = false;
+                    field.style.borderColor = 'var(--danger)';
+                    field.classList.add('error-highlight');
+                    if (!firstInvalidField) {
+                        firstInvalidField = field;
+                        errorMessage = `Please complete: ${fieldInfo.name} (Required for Returning Learners)`;
+                    }
+                }
+            });
+        }
+        
+        // Check if sex is selected
+        const male = document.getElementById('male');
+        const female = document.getElementById('female');
+        
+        if (!male.checked && !female.checked) {
+            isValid = false;
+            const radioContainer = male.closest('.radio-group');
+            if (radioContainer) {
+                radioContainer.style.border = '1px solid var(--danger)';
+                radioContainer.style.borderRadius = '4px';
+                radioContainer.style.padding = '4px';
+            }
+            if (!firstInvalidField) {
+                firstInvalidField = male;
+                errorMessage = 'Please select the student\'s sex';
             }
         }
         
         // Check if at least one learning modality is selected
         const modalityCheckboxes = document.querySelectorAll('input[name="learningModality"]:checked');
         if (modalityCheckboxes.length === 0) {
-            alert('Please select at least one learning modality preference.');
-            document.getElementById('faceToFace').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            isValid = false;
+            const modalitySection = document.querySelector('.modality-grid');
+            if (modalitySection) {
+                modalitySection.style.border = '2px solid var(--danger)';
+                modalitySection.style.borderRadius = '8px';
+                modalitySection.style.padding = '8px';
+            }
+            if (!firstInvalidField) {
+                firstInvalidField = document.getElementById('faceToFace');
+                errorMessage = 'Please select at least one learning modality preference';
+            }
+        }
+        
+        // If validation fails, show error and focus on first invalid field
+        if (!isValid) {
+            // Show custom alert with specific field information
+            alert(errorMessage || 'Please complete all required fields before proceeding.');
+            
+            // Scroll to and focus the first invalid field
+            if (firstInvalidField) {
+                // Add visual emphasis
+                if (firstInvalidField.type !== 'radio' && firstInvalidField.type !== 'checkbox') {
+                    firstInvalidField.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        firstInvalidField.style.backgroundColor = '';
+                    }, 3000);
+                }
+                
+                // Scroll into view with offset for better visibility
+                firstInvalidField.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                // Focus the field after scroll
+                setTimeout(() => {
+                    if (firstInvalidField.type !== 'radio' && firstInvalidField.type !== 'checkbox') {
+                        firstInvalidField.focus();
+                    }
+                }, 500);
+            }
+            
+            // CRITICAL: Return false to prevent form submission
             return false;
         }
         
-        // If all validation passes, save the form data
-        const formData = new FormData(document.getElementById('applicationForm'));
-        const data = Object.fromEntries(formData);
+        // All validation passed - save one final time before navigation
+        autoSaveFormData();
         
-        // Save to localStorage
-        localStorage.setItem('applicationData', JSON.stringify(data));
+        // Set a flag in sessionStorage to indicate successful submission from this page
+        sessionStorage.setItem('applicationFormCompleted', 'true');
         
         // Navigate to next page
         window.location.href = 'uploadDocument.html';
+        
+        // Return false to prevent default form submission
+        return false;
     }
 
     // Form validation feedback
-    const form = document.getElementById('applicationForm');
     const inputs = form.querySelectorAll('input, select, textarea');
     
     inputs.forEach(input => {
+        // Add change listener for radio buttons to clear group error styling
+        if (input.type === 'radio') {
+            input.addEventListener('change', function() {
+                const radioGroup = this.closest('.radio-group');
+                if (radioGroup && radioGroup.style.border) {
+                    radioGroup.style.border = '';
+                    radioGroup.style.padding = '';
+                }
+            });
+        }
+        
+        // Add change listener for checkboxes in learning modality
+        if (input.type === 'checkbox' && input.name === 'learningModality') {
+            input.addEventListener('change', function() {
+                const modalityGrid = this.closest('.modality-grid');
+                if (modalityGrid && modalityGrid.style.border) {
+                    modalityGrid.style.border = '';
+                    modalityGrid.style.padding = '';
+                }
+            });
+        }
+        
         input.addEventListener('blur', function() {
-            // Skip validation for disabled fields
+            // Skip validation for disabled fields or LRN when "No" is selected
             if (this.disabled) return;
+            
+            // Special handling for LRN field
+            if (this.id === 'lrn') {
+                const withLrnNo = document.getElementById('withLrnNo').checked;
+                if (withLrnNo) {
+                    // Don't show error for LRN when "No" is selected
+                    this.style.borderColor = '';
+                    return;
+                }
+            }
             
             // Check if field is in returning learner section
             const returningSection = document.getElementById('returningLearnerSection');
@@ -489,7 +802,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Clear error styling when user starts typing
         input.addEventListener('input', function() {
-            if (this.style.borderColor === 'var(--danger)') {
+            if (this.style.borderColor === 'var(--danger)' || this.style.borderColor.includes('danger')) {
                 this.style.borderColor = '';
             }
         });
