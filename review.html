@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPES SIMS - Review Application</title>
+    <link rel="stylesheet" href="CSS/review.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-container">
+            <a href="#" class="header-logo">
+                <img src="Images/logo.png" alt="VPES Logo">
+                <span class="header-logo-text">VPES SIMS</span>
+            </a>
+            
+            <div class="header-nav">
+                <a href="./uploadDocument.html" class="header-btn btn-back">
+                    <span class="btn-icon">←</span>
+                    <span class="btn-text">Previous Step</span>
+                </a>
+                <a href="./index.html" class="header-btn btn-dashboard">
+                    <span class="btn-icon">🏠</span>
+                    <span class="btn-text">Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header-section">
+            <h1 class="page-title">Review Application</h1>
+            <p class="page-subtitle">Please review all information before submitting your application</p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-step">
+                    <div class="step-indicator completed">✓</div>
+                    <div class="step-label">Personal Info</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator completed">✓</div>
+                    <div class="step-label">Documents</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator active">3</div>
+                    <div class="step-label">Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Section -->
+        <div class="alert alert-info">
+            <span class="alert-icon">📝</span>
+            <div>
+                <strong>Review Your Application:</strong> Please carefully review all the information you've provided. 
+                Click on any <span class="edit-hint">Edit</span> button to go back and make changes if needed.
+                Once you're satisfied, click <strong>Submit Application</strong> at the bottom.
+            </div>
+        </div>
+
+        <!-- Missing Documents Alert (shown if documents are missing) -->
+        <div class="alert alert-warning" id="missingDocsAlert" style="display: none;">
+            <span class="alert-icon">⚠️</span>
+            <div>
+                <strong>Missing Documents:</strong> 
+                <span id="missingDocsList"></span>
+                These must be submitted within 30 days after enrollment.
+            </div>
+        </div>
+
+        <!-- School Information Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">🏫</span>
+                    <h3>School Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>School Year</label>
+                        <span id="reviewSchoolYear">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Grade Level to Enroll</label>
+                        <span id="reviewGradeLevel">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>With LRN?</label>
+                        <span id="reviewWithLrn">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Returning Learner?</label>
+                        <span id="reviewReturning">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Information Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">👤</span>
+                    <h3>Student Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Full Name</label>
+                        <span id="reviewFullName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>LRN</label>
+                        <span id="reviewLRN">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>PSA Birth Certificate No.</label>
+                        <span id="reviewPSA">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Birthdate</label>
+                        <span id="reviewBirthdate">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Age</label>
+                        <span id="reviewAge">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Sex</label>
+                        <span id="reviewSex">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Place of Birth</label>
+                        <span id="reviewBirthPlace">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Mother Tongue</label>
+                        <span id="reviewMotherTongue">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Information Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">🏠</span>
+                    <h3>Address Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="address-section">
+                    <h4>Current Address</h4>
+                    <div class="address-text" id="reviewCurrentAddress">-</div>
+                </div>
+                <div class="address-section">
+                    <h4>Permanent Address</h4>
+                    <div class="address-text" id="reviewPermanentAddress">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parent/Guardian Information Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">👨‍👩‍👧‍👦</span>
+                    <h3>Parent/Guardian Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="parent-section" id="fatherSection">
+                    <h4>Father's Information</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Name</label>
+                            <span id="reviewFatherName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Contact Number</label>
+                            <span id="reviewFatherContact">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email Address</label>
+                            <span id="reviewFatherEmail">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="parent-section" id="motherSection">
+                    <h4>Mother's Information</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Name</label>
+                            <span id="reviewMotherName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Contact Number</label>
+                            <span id="reviewMotherContact">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email Address</label>
+                            <span id="reviewMotherEmail">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="parent-section" id="guardianSection" style="display: none;">
+                    <h4>Guardian's Information</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Name</label>
+                            <span id="reviewGuardianName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Contact Number</label>
+                            <span id="reviewGuardianContact">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">📋</span>
+                    <h3>Additional Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Learner with Disability?</label>
+                        <span id="reviewDisability">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Indigenous People?</label>
+                        <span id="reviewIP">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>4Ps Beneficiary?</label>
+                        <span id="review4Ps">-</span>
+                    </div>
+                    <div class="info-item full-width">
+                        <label>Learning Modality Preferences</label>
+                        <span id="reviewModality">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- For Returning Learners Section -->
+        <div class="review-card" id="returningLearnerCard" style="display: none;">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">🔄</span>
+                    <h3>Returning Learner Information</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('application')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Last Grade Level Completed</label>
+                        <span id="reviewLastGrade">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Last School Year Completed</label>
+                        <span id="reviewLastYear">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Last School Attended</label>
+                        <span id="reviewLastSchool">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>School ID</label>
+                        <span id="reviewSchoolId">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Section -->
+        <div class="review-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">📁</span>
+                    <h3>Uploaded Documents</h3>
+                </div>
+                <button class="edit-btn" onclick="editSection('documents')">
+                    <span>✏️</span> Edit
+                </button>
+            </div>
+            <div class="review-content">
+                <div class="document-list">
+                    <div class="document-item" id="docBirthCert">
+                        <span class="doc-icon">📄</span>
+                        <span class="doc-name">Birth Certificate</span>
+                        <span class="doc-status" data-status="pending">Not Uploaded</span>
+                    </div>
+                    <div class="document-item" id="docReportCard">
+                        <span class="doc-icon">📊</span>
+                        <span class="doc-name">Report Card / Form 138</span>
+                        <span class="doc-status" data-status="pending">Not Uploaded</span>
+                    </div>
+                    <div class="document-item" id="docIdPhoto">
+                        <span class="doc-icon">📸</span>
+                        <span class="doc-name">ID Photo (2x2)</span>
+                        <span class="doc-status" data-status="pending">Not Uploaded</span>
+                    </div>
+                    <div class="document-item" id="docMoralCert">
+                        <span class="doc-icon">🏆</span>
+                        <span class="doc-name">Good Moral Certificate</span>
+                        <span class="doc-status" data-status="pending">Not Uploaded</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Declaration Section -->
+        <div class="review-card declaration-card">
+            <div class="review-header">
+                <div class="review-title">
+                    <span class="review-icon">✋</span>
+                    <h3>Declaration</h3>
+                </div>
+            </div>
+            <div class="review-content">
+                <div class="declaration-text">
+                    I hereby certify that all information provided in this application is true and correct 
+                    to the best of my knowledge. I understand that any false information may result in the 
+                    rejection of this application or cancellation of enrollment.
+                </div>
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="agreeTerms">
+                    <label for="agreeTerms">
+                        I have reviewed all information and agree to the terms and conditions
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="button-group">
+            <button class="button button-secondary" onclick="window.location.href='uploadDocument.html';">
+                <span>⬅️</span> Previous Step
+            </button>
+            <button class="button button-primary" id="submitBtn" disabled onclick="submitApplication()">
+                Submit Application <span>✅</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="successModal">
+        <div class="modal-content success-modal">
+            <div class="success-icon">🎉</div>
+            <h2>Application Submitted Successfully!</h2>
+            <p>Your application has been submitted and is now under review.</p>
+            <div class="reference-number">
+                <label>Reference Number:</label>
+                <div class="ref-number" id="refNumber">VPES-2024-00001</div>
+            </div>
+            <p class="success-note">
+                Please save this reference number for future reference. 
+                You will receive an email confirmation shortly.
+            </p>
+            <div class="modal-actions">
+                <button class="button button-primary" onclick="window.location.href='index.html';">
+                    Go to Dashboard
+                </button>
+                <button class="button button-secondary" onclick="window.print();">
+                    Print Application
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="JS/review.js"></script>
+</body>
+</html>
