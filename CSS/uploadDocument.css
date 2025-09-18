@@ -11,7 +11,7 @@
     --secondary: #10B981;
     --warning: #F59E0B;
     --danger: #EF4444;
-    --dark: #1F2937;
+    --dark: #111827;
     --gray: #6B7280;
     --light-gray: #F3F4F6;
     --border: #E5E7EB;
@@ -31,11 +31,11 @@ body {
     line-height: 1.6;
 }
 
-/* Header Styles */
+/* Header Styles - Fully Responsive */
 .header {
     background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 15px 0;
+    padding: 12px 0;
     position: fixed;
     top: 0;
     left: 0;
@@ -47,40 +47,47 @@ body {
 .header-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    min-height: 48px;
 }
 
 .header-logo {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     color: var(--dark);
     text-decoration: none;
+    flex-shrink: 0;
 }
 
 .header-logo img {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     object-fit: cover;
+    flex-shrink: 0;
 }
 
 .header-logo-text {
     font-size: 1.1rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .header-nav {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .header-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     border-radius: 6px;
     text-decoration: none;
     font-weight: 500;
@@ -88,7 +95,9 @@ body {
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    white-space: nowrap;
 }
 
 .btn-back {
@@ -117,7 +126,7 @@ body {
 .container {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 90px 20px 24px;
+    padding: 80px 20px 24px;
 }
 
 /* Header Section */
@@ -239,6 +248,24 @@ body {
 .alert-info {
     background: linear-gradient(135deg, #DBEAFE, #EDE9FE);
     border: 1px solid #93C5FD;
+    color: var(--dark);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #D1FAE5, #ECFDF5);
+    border: 1px solid #6EE7B7;
+    color: var(--dark);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #FEF3C7, #FEF9E6);
+    border: 1px solid #FCD34D;
+    color: var(--dark);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #FEE2E2, #FEF2F2);
+    border: 1px solid #FCA5A5;
     color: var(--dark);
 }
 
@@ -417,11 +444,6 @@ body {
     animation: slideIn 0.3s ease;
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 .file-info {
     display: flex;
     align-items: center;
@@ -509,11 +531,6 @@ body {
     height: 40px;
     animation: spin 1s linear infinite;
     margin: 0 auto 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 /* Buttons */
@@ -660,6 +677,17 @@ body {
     padding: 40px 20px;
 }
 
+/* Dynamic Upload Alert */
+.upload-alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: slideDown 0.3s ease;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }
@@ -688,22 +716,71 @@ body {
     }
 }
 
+@keyframes slideIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes slideDown {
+    from { 
+        opacity: 0; 
+        transform: translateY(-20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .header {
+        padding: 10px 0;
+    }
+    
     .header-container {
-        padding: 0 15px;
+        padding: 0 12px;
+    }
+    
+    .header-logo img {
+        width: 32px;
+        height: 32px;
     }
     
     .header-logo-text {
-        font-size: 0.95rem;
+        font-size: 1rem;
+    }
+    
+    .header-nav {
+        gap: 8px;
+    }
+    
+    .header-btn {
+        padding: 7px 12px;
+        font-size: 0.85rem;
     }
     
     .container {
-        padding: 80px 15px 30px;
+        padding: 72px 15px 30px;
     }
     
     .page-title {
         font-size: 1.8rem;
+    }
+
+    .page-subtitle {
+        font-size: 1rem;
     }
 
     .form-card {
@@ -775,13 +852,55 @@ body {
 }
 
 @media (max-width: 480px) {
+    .header {
+        padding: 8px 0;
+    }
+    
+    .header-container {
+        padding: 0 10px;
+        gap: 8px;
+    }
+    
+    .header-logo {
+        gap: 8px;
+    }
+    
+    .header-logo img {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .header-logo-text {
+        font-size: 0.9rem;
+    }
+    
     .header-nav {
-        gap: 10px;
+        gap: 6px;
+        flex: 1;
+        justify-content: flex-end;
     }
     
     .header-btn {
-        padding: 6px 12px;
+        padding: 6px 10px;
         font-size: 0.8rem;
+        gap: 4px;
+    }
+    
+    /* Show abbreviated button text on mobile */
+    .btn-text {
+        display: inline;
+    }
+    
+    .btn-icon {
+        display: inline;
+    }
+    
+    .container {
+        padding: 65px 12px 20px;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
     }
 
     .progress-container {
@@ -818,5 +937,40 @@ body {
 
     .pdf-preview {
         min-height: 70vh;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+    .header-logo-text {
+        display: none;
+    }
+    
+    .header-btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+    
+    /* Hide button text labels on very small screens */
+    .btn-register .btn-text {
+        display: none;
+    }
+    
+    .btn-back .btn-text {
+        font-size: 0.75rem;
+    }
+    
+    .header-nav {
+        justify-content: space-between;
+        width: 100%;
+        flex: 1;
+    }
+    
+    .page-title {
+        font-size: 1.3rem;
+    }
+    
+    .page-subtitle {
+        font-size: 0.9rem;
     }
 }

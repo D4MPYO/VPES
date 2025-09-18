@@ -16,8 +16,14 @@
             </a>
             
             <div class="header-nav">
-                <a href="./applicationform.html" class="header-btn btn-back">← Previous Step</a>
-                <a href="./index.html" class="header-btn btn-register">🏠 Dashboard</a>
+                <a href="./applicationform.html" class="header-btn btn-back">
+                    <span class="btn-icon">←</span>
+                    <span class="btn-text">Previous Step</span>
+                </a>
+                <a href="./index.html" class="header-btn btn-register">
+                    <span class="btn-icon">🏠</span>
+                    <span class="btn-text">Dashboard</span>
+                </a>
             </div>
         </div>
     </div>
@@ -47,15 +53,15 @@
             </div>
         </div>
 
-        <!-- Update this alert section in the HTML -->
-            <div class="alert alert-info">
-                <span class="alert-icon">📋</span>
-                <div>
-                    <strong>Document Requirements:</strong> You may proceed with your application even if some documents are not ready. 
-                    Missing documents must be submitted within <strong> 30 days after enrollment</strong>. 
-                    Supported formats: PDF, JPG, PNG (Max: 5MB per file).
-                </div>
+        <!-- Alert Section -->
+        <div class="alert alert-info">
+            <span class="alert-icon">📋</span>
+            <div>
+                <strong>Document Requirements:</strong> You may proceed with your application even if some documents are not ready. 
+                Missing documents must be submitted within <strong>30 days after enrollment</strong>. 
+                Supported formats: PDF, JPG, PNG (Max: 5MB per file).
             </div>
+        </div>
 
         <!-- Requirements Card -->
         <div class="form-card requirements-card">
@@ -229,7 +235,7 @@
 
         <!-- Form Actions -->
         <div class="button-group">
-            <button class="button button-secondary" onclick="window.location.href='admission.html';">
+            <button class="button button-secondary" onclick="window.location.href='applicationform.html';">
                 <span>⬅️</span> Previous Step
             </button>
             <button class="button button-primary" onclick="window.location.href='review.html';">
@@ -256,4 +262,3 @@
     <script src="JS/uploadDocuments.js"></script>
 </body>
 </html>
-

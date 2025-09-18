@@ -1,7 +1,12 @@
+/**
+ * Document Upload Management System
+ * Handles file uploads, validation, preview, and storage
+ */
 class DocumentUploader {
     constructor() {
         this.uploadedFiles = new Map();
         this.fileURLs = new Map();
+        this.maxFileSize = 5 * 1024 * 1024; // 5MB
         this.init();
     }
 
@@ -16,7 +21,35 @@ class DocumentUploader {
             input.addEventListener('change', (e) => this.handleFileSelect(e));
         });
 
-        // Upload area click events
+        // Upload area events
+        this.setupUploadAreas();
+
+        // Remove button events
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.removeFile(e));
+        });
+
+        // View button events
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.viewDocument(e));
+        });
+
+        // File details click events (also triggers view)
+        document.querySelectorAll('.file-details').forEach(details => {
+            details.addEventListener('click', (e) => {
+                const target = details.dataset.view;
+                this.showDocumentPreview(target);
+            });
+        });
+
+        // Modal events
+        this.setupModalEvents();
+
+        // Navigation button events
+        this.setupNavigationButtons();
+    }
+
+    setupUploadAreas() {
         document.querySelectorAll('.upload-area').forEach(area => {
             const fileInput = area.querySelector('.file-input');
             const fileBtn = area.querySelector('.btn-file');
@@ -40,33 +73,17 @@ class DocumentUploader {
                 }
             });
         });
+    }
 
-        // Remove button events
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.removeFile(e));
-        });
-
-        // View button events
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.viewDocument(e));
-        });
-
-        // File details click events (also triggers view)
-        document.querySelectorAll('.file-details').forEach(details => {
-            details.addEventListener('click', (e) => {
-                const target = details.dataset.view;
-                this.showDocumentPreview(target);
-            });
-        });
-
-        // Modal close event
+    setupModalEvents() {
         const closeBtn = document.getElementById('closeViewBtn');
+        const modal = document.getElementById('viewModal');
+
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.closeViewModal());
         }
 
         // Close modal when clicking outside
-        const modal = document.getElementById('viewModal');
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target.id === 'viewModal') {
@@ -74,8 +91,44 @@ class DocumentUploader {
                 }
             });
         }
+
+        // ESC key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeViewModal();
+            }
+        });
     }
 
+    setupNavigationButtons() {
+        // Next button - allows proceeding without all documents
+        const nextButton = document.querySelector('.button-primary');
+        if (nextButton) {
+            nextButton.removeAttribute('onclick');
+            
+            nextButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveDocumentStatus();
+                
+                if (this.proceedWithMissingDocuments()) {
+                    window.location.href = 'review.html';
+                }
+            });
+        }
+        
+        // Previous button
+        const prevButton = document.querySelector('.button-secondary');
+        if (prevButton) {
+            prevButton.removeAttribute('onclick');
+            prevButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveDocumentStatus();
+                window.location.href = 'applicationform.html';
+            });
+        }
+    }
+
+    // Drag and Drop Handlers
     handleDragOver(e) {
         e.preventDefault();
         e.currentTarget.classList.add('dragover');
@@ -107,6 +160,7 @@ class DocumentUploader {
         }
     }
 
+    // File Processing
     async processFile(file, target) {
         if (!this.validateFile(file, target)) return;
 
@@ -129,8 +183,7 @@ class DocumentUploader {
             try {
                 sessionStorage.setItem(`document_${target}`, JSON.stringify(fileData));
             } catch (e) {
-                // If storage quota exceeded, show warning
-                console.warn('Storage quota exceeded, file too large for session storage');
+                console.warn('Storage quota exceeded');
                 this.showAlert('File uploaded successfully but may not persist if you leave the site (file too large for browser storage)', 'warning');
             }
             
@@ -141,12 +194,12 @@ class DocumentUploader {
             this.fileURLs.set(target, fileURL);
             this.uploadedFiles.set(target, file);
             
-            // Show uploaded file
+            // Show uploaded file with animation
             setTimeout(() => {
                 this.showUploadedFile(file, target);
                 this.hideLoading(target);
                 this.saveDocumentStatus();
-            }, 1000);
+            }, 800);
             
         } catch (error) {
             console.error('Error processing file:', error);
@@ -155,43 +208,7 @@ class DocumentUploader {
         }
     }
 
-    // Convert file to Base64
-    fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-    // Convert Base64 back to Blob
-    base64ToBlob(base64Data, contentType) {
-        return new Promise((resolve, reject) => {
-            try {
-                // Remove data URL prefix if present
-                const base64 = base64Data.replace(/^data:.*?;base64,/, '');
-                
-                // Decode base64
-                const byteCharacters = atob(base64);
-                const byteNumbers = new Array(byteCharacters.length);
-                
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: contentType });
-                resolve(blob);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
-
     validateFile(file, target) {
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        
         // Different file types allowed for different uploads
         const allowedTypes = {
             'birth-cert': ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
@@ -200,7 +217,7 @@ class DocumentUploader {
             'moral-cert': ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
         };
 
-        if (file.size > maxSize) {
+        if (file.size > this.maxFileSize) {
             this.showAlert('File size must be less than 5MB', 'error');
             return false;
         }
@@ -218,8 +235,38 @@ class DocumentUploader {
         return true;
     }
 
+    // File Conversion Utilities
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    base64ToBlob(base64Data, contentType) {
+        return new Promise((resolve, reject) => {
+            try {
+                const base64 = base64Data.replace(/^data:.*?;base64,/, '');
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: contentType });
+                resolve(blob);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    // UI Updates
     showAlert(message, type = 'info') {
-        // Create or update alert
         let alertEl = document.querySelector('.upload-alert');
         if (!alertEl) {
             alertEl = document.createElement('div');
@@ -229,7 +276,6 @@ class DocumentUploader {
             container.insertBefore(alertEl, firstCard);
         }
 
-        // Map type to appropriate styling
         const typeMap = {
             'error': 'danger',
             'warning': 'warning',
@@ -239,7 +285,6 @@ class DocumentUploader {
 
         alertEl.className = `upload-alert alert alert-${typeMap[type] || 'info'}`;
         
-        // Choose appropriate icon
         const icons = {
             'error': '⚠️',
             'warning': '⚠️',
@@ -252,7 +297,7 @@ class DocumentUploader {
             <div>${message}</div>
         `;
 
-        // Auto-remove after 5 seconds (longer for warnings)
+        // Auto-remove after timeout
         const timeout = type === 'warning' ? 8000 : 5000;
         setTimeout(() => {
             if (alertEl && alertEl.parentNode) {
@@ -286,21 +331,56 @@ class DocumentUploader {
         
         uploadedEl.classList.add('show');
         
-        // Show success message
         this.showAlert(`${file.name} uploaded successfully!`, 'success');
     }
 
+    // File Removal with Inline Confirmation
     removeFile(e) {
         e.stopPropagation();
         const uploadedEl = e.target.closest('[data-file]');
         const target = uploadedEl.dataset.file;
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const removeBtn = e.target;
 
-        // Confirm removal
-        if (!confirm('Are you sure you want to remove this file?')) {
-            return;
+        // Check if already showing confirmation
+        if (removeBtn.classList.contains('confirm-mode')) {
+            // User confirmed - proceed with removal
+            this.performFileRemoval(uploadedEl, target, uploadArea);
+        } else {
+            // Show confirmation state
+            this.showRemovalConfirmation(removeBtn);
         }
+    }
 
+    showRemovalConfirmation(removeBtn) {
+        removeBtn.classList.add('confirm-mode');
+        removeBtn.style.background = '#dc2626';
+        removeBtn.innerHTML = '⚠️ Confirm Delete';
+        
+        // Reset button after 3 seconds if not clicked
+        const resetTimeout = setTimeout(() => {
+            if (removeBtn.classList.contains('confirm-mode')) {
+                this.resetRemoveButton(removeBtn);
+            }
+        }, 3000);
+
+        // Store timeout reference to clear if needed
+        removeBtn.dataset.resetTimeout = resetTimeout;
+    }
+
+    resetRemoveButton(removeBtn) {
+        removeBtn.classList.remove('confirm-mode');
+        removeBtn.style.background = '';
+        removeBtn.innerHTML = '🗑️ Remove';
+        
+        // Clear timeout if it exists
+        if (removeBtn.dataset.resetTimeout) {
+            clearTimeout(removeBtn.dataset.resetTimeout);
+            delete removeBtn.dataset.resetTimeout;
+        }
+    }
+
+    performFileRemoval(uploadedEl, target, uploadArea) {
         uploadedEl.classList.remove('show');
         if (uploadArea) uploadArea.style.display = 'block';
         
@@ -323,6 +403,7 @@ class DocumentUploader {
         this.saveDocumentStatus();
     }
 
+    // Document Preview
     viewDocument(e) {
         e.stopPropagation();
         const target = e.target.dataset.view;
@@ -330,35 +411,18 @@ class DocumentUploader {
     }
 
     async showDocumentPreview(target) {
-        // First check if we have it in memory
         let fileURL = this.fileURLs.get(target);
         let file = this.uploadedFiles.get(target);
         
         // If not in memory, try to load from sessionStorage
         if (!fileURL) {
-            const storedData = sessionStorage.getItem(`document_${target}`);
-            if (storedData) {
-                try {
-                    const fileData = JSON.parse(storedData);
-                    const blob = await this.base64ToBlob(fileData.data, fileData.type);
-                    fileURL = URL.createObjectURL(blob);
-                    this.fileURLs.set(target, fileURL);
-                    
-                    // Create a file-like object for display
-                    file = {
-                        name: fileData.name,
-                        type: fileData.type,
-                        size: fileData.size
-                    };
-                } catch (error) {
-                    console.error('Error loading stored document:', error);
-                    this.showAlert('Error loading document. Please re-upload.', 'error');
-                    return;
-                }
-            } else {
+            const loadResult = await this.loadDocumentFromStorage(target);
+            if (!loadResult) {
                 this.showAlert('No document found to preview.', 'error');
                 return;
             }
+            fileURL = loadResult.fileURL;
+            file = loadResult.file;
         }
 
         const modal = document.getElementById('viewModal');
@@ -380,36 +444,64 @@ class DocumentUploader {
         // Clear previous content
         preview.innerHTML = '<div class="preview-message">Loading document...</div>';
 
-        // Show modal first
+        // Show modal
         modal.style.display = 'flex';
 
-        // PDF PREVIEW (via PDF.js)
+        // Render appropriate preview
         if (file.type === 'application/pdf') {
             this.renderPDFPreview(fileURL, preview);
-        }
-        // IMAGE PREVIEW
-        else if (file.type.startsWith('image/')) {
-            preview.innerHTML = `
-                <img src="${fileURL}" alt="Document preview" class="document-image">
-            `;
-        }
-        // OTHER FILE TYPES
-        else {
-            preview.innerHTML = `
-                <div class="preview-message">
-                    📄 Document: ${file.name}<br>
-                    File type: ${file.type}<br>
-                    Size: ${this.formatFileSize(file.size)}<br><br>
-                    <a href="${fileURL}" target="_blank" class="button button-primary">
-                        Download and View
-                    </a>
-                </div>
-            `;
+        } else if (file.type.startsWith('image/')) {
+            this.renderImagePreview(fileURL, preview);
+        } else {
+            this.renderGenericPreview(file, fileURL, preview);
         }
     }
 
+    async loadDocumentFromStorage(target) {
+        const storedData = sessionStorage.getItem(`document_${target}`);
+        if (!storedData) return null;
+
+        try {
+            const fileData = JSON.parse(storedData);
+            const blob = await this.base64ToBlob(fileData.data, fileData.type);
+            const fileURL = URL.createObjectURL(blob);
+            this.fileURLs.set(target, fileURL);
+            
+            return {
+                fileURL,
+                file: {
+                    name: fileData.name,
+                    type: fileData.type,
+                    size: fileData.size
+                }
+            };
+        } catch (error) {
+            console.error('Error loading stored document:', error);
+            this.showAlert('Error loading document. Please re-upload.', 'error');
+            return null;
+        }
+    }
+
+    renderImagePreview(fileURL, preview) {
+        preview.innerHTML = `
+            <img src="${fileURL}" alt="Document preview" class="document-image">
+        `;
+    }
+
+    renderGenericPreview(file, fileURL, preview) {
+        preview.innerHTML = `
+            <div class="preview-message">
+                📄 Document: ${file.name}<br>
+                File type: ${file.type}<br>
+                Size: ${this.formatFileSize(file.size)}<br><br>
+                <a href="${fileURL}" target="_blank" class="button button-primary">
+                    Download and View
+                </a>
+            </div>
+        `;
+    }
+
     renderPDFPreview(fileURL, preview) {
-        // Check if PDF.js is available
         if (typeof pdfjsLib === 'undefined') {
             preview.innerHTML = `
                 <div class="preview-message">
@@ -422,6 +514,9 @@ class DocumentUploader {
             return;
         }
 
+        // Set worker source
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         preview.innerHTML = '';
         const viewer = document.createElement('div');
         viewer.style.cssText = 'width: 100%; height: 100%; overflow: auto; padding: 10px;';
@@ -431,25 +526,7 @@ class DocumentUploader {
         loadingTask.promise.then(pdf => {
             // Render all pages
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                pdf.getPage(pageNum).then(page => {
-                    const scale = 1.5;
-                    const viewport = page.getViewport({ scale: scale });
-                    
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    canvas.style.cssText = 'display: block; margin: 0 auto 15px; max-width: 100%; height: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px;';
-                    
-                    viewer.appendChild(canvas);
-
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    
-                    page.render(renderContext);
-                });
+                this.renderPDFPage(pdf, pageNum, viewer);
             }
         }).catch(err => {
             console.error('PDF rendering error:', err);
@@ -464,11 +541,34 @@ class DocumentUploader {
         });
     }
 
+    renderPDFPage(pdf, pageNum, container) {
+        pdf.getPage(pageNum).then(page => {
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale: scale });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.cssText = 'display: block; margin: 0 auto 15px; max-width: 100%; height: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px;';
+            
+            container.appendChild(canvas);
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            
+            page.render(renderContext);
+        });
+    }
+
     closeViewModal() {
         const modal = document.getElementById('viewModal');
         if (modal) modal.style.display = 'none';
     }
 
+    // Utility Functions
     formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -477,17 +577,18 @@ class DocumentUploader {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // Save document upload status to sessionStorage
+    // Storage and Status Management
     saveDocumentStatus() {
         const status = {
-            birthCert: this.uploadedFiles.has('birth-cert') || sessionStorage.getItem('document_birth-cert') !== null,
-            reportCard: this.uploadedFiles.has('report-card') || sessionStorage.getItem('document_report-card') !== null,
-            idPhoto: this.uploadedFiles.has('id-photo') || sessionStorage.getItem('document_id-photo') !== null,
-            moralCert: this.uploadedFiles.has('moral-cert') || sessionStorage.getItem('document_moral-cert') !== null,
+            birthCert: this.hasDocument('birth-cert'),
+            reportCard: this.hasDocument('report-card'),
+            idPhoto: this.hasDocument('id-photo'),
+            moralCert: this.hasDocument('moral-cert'),
             timestamp: new Date().toISOString()
         };
         
-        status.totalUploaded = [status.birthCert, status.reportCard, status.idPhoto, status.moralCert].filter(Boolean).length;
+        status.totalUploaded = [status.birthCert, status.reportCard, status.idPhoto, status.moralCert]
+            .filter(Boolean).length;
         
         // Store which documents still need to be submitted
         const pendingDocuments = [];
@@ -498,10 +599,14 @@ class DocumentUploader {
         status.hasAllRequired = pendingDocuments.length === 0;
         
         sessionStorage.setItem('documentUploadStatus', JSON.stringify(status));
-        sessionStorage.setItem('documentsUploaded', 'partial');
+        sessionStorage.setItem('documentsUploaded', status.totalUploaded > 0 ? 'partial' : 'none');
     }
 
-    // Load saved documents from sessionStorage
+    hasDocument(target) {
+        return this.uploadedFiles.has(target) || 
+               sessionStorage.getItem(`document_${target}`) !== null;
+    }
+
     async loadSavedDocuments() {
         const documents = [
             { key: 'birth-cert', name: 'Birth Certificate' },
@@ -539,7 +644,6 @@ class DocumentUploader {
         }
     }
 
-    // Show restored file from sessionStorage
     showRestoredFile(fileData, target) {
         const uploadedEl = document.querySelector(`[data-file="${target}"]`);
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
@@ -555,7 +659,6 @@ class DocumentUploader {
         }
     }
 
-    // Check if user wants to proceed without all documents
     proceedWithMissingDocuments() {
         const status = this.getUploadStatus();
         const missingDocs = [];
@@ -565,20 +668,208 @@ class DocumentUploader {
         if (!status.idPhoto) missingDocs.push('ID Photo');
         
         if (missingDocs.length > 0) {
-            const message = `You haven't uploaded the following document(s):\n\n${missingDocs.join('\n')}\n\nYou can still proceed with your application, but these documents must be submitted within 30 days.\n\nDo you want to continue?`;
-            return confirm(message);
+            // Create a custom confirmation modal instead of using confirm()
+            return this.showMissingDocumentsModal(missingDocs);
         }
         
         return true;
     }
 
-    // Get upload status for validation
+    showMissingDocumentsModal(missingDocs) {
+        // Create modal element
+        const modal = document.createElement('div');
+        modal.className = 'custom-confirm-modal';
+        modal.innerHTML = `
+            <div class="confirm-modal-content">
+                <div class="confirm-modal-header">
+                    <h3>⚠️ Missing Documents</h3>
+                </div>
+                <div class="confirm-modal-body">
+                    <p>You haven't uploaded the following required document(s):</p>
+                    <ul class="missing-docs-list">
+                        ${missingDocs.map(doc => `<li>• ${doc}</li>`).join('')}
+                    </ul>
+                    <p class="confirm-note">
+                        <strong>Note:</strong> You can still proceed with your application, 
+                        but these documents must be submitted within <strong>30 days after enrollment</strong>.
+                    </p>
+                </div>
+                <div class="confirm-modal-footer">
+                    <button class="confirm-btn-cancel">Cancel</button>
+                    <button class="confirm-btn-proceed">Proceed Anyway</button>
+                </div>
+            </div>
+        `;
+
+        // Add modal styles
+        this.addModalStyles();
+        
+        // Add to body
+        document.body.appendChild(modal);
+
+        // Return promise for user's choice
+        return new Promise((resolve) => {
+            modal.querySelector('.confirm-btn-cancel').addEventListener('click', () => {
+                modal.remove();
+                resolve(false);
+            });
+
+            modal.querySelector('.confirm-btn-proceed').addEventListener('click', () => {
+                modal.remove();
+                resolve(true);
+            });
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                    resolve(false);
+                }
+            });
+        }).then(result => {
+            if (result) {
+                window.location.href = 'review.html';
+            }
+            return result;
+        });
+    }
+
+    addModalStyles() {
+        if (document.getElementById('confirm-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'confirm-modal-styles';
+        style.textContent = `
+            .custom-confirm-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                animation: fadeIn 0.2s ease;
+            }
+
+            .confirm-modal-content {
+                background: white;
+                border-radius: 12px;
+                max-width: 450px;
+                width: 90%;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                animation: slideUp 0.3s ease;
+            }
+
+            .confirm-modal-header {
+                padding: 20px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .confirm-modal-header h3 {
+                margin: 0;
+                color: #111827;
+                font-size: 1.3rem;
+            }
+
+            .confirm-modal-body {
+                padding: 20px;
+            }
+
+            .confirm-modal-body p {
+                margin: 0 0 15px;
+                color: #6b7280;
+                line-height: 1.6;
+            }
+
+            .missing-docs-list {
+                list-style: none;
+                padding: 0;
+                margin: 15px 0;
+                background: #fef3c7;
+                border: 1px solid #fcd34d;
+                border-radius: 8px;
+                padding: 12px 15px;
+            }
+
+            .missing-docs-list li {
+                color: #92400e;
+                padding: 4px 0;
+                font-weight: 500;
+            }
+
+            .confirm-note {
+                background: #dbeafe;
+                border: 1px solid #93c5fd;
+                border-radius: 8px;
+                padding: 12px;
+                margin-top: 15px !important;
+                font-size: 0.9rem;
+            }
+
+            .confirm-modal-footer {
+                padding: 15px 20px;
+                border-top: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+
+            .confirm-modal-footer button {
+                padding: 8px 20px;
+                border-radius: 6px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .confirm-btn-cancel {
+                background: #f3f4f6;
+                color: #6b7280;
+            }
+
+            .confirm-btn-cancel:hover {
+                background: #e5e7eb;
+            }
+
+            .confirm-btn-proceed {
+                background: #4f46e5;
+                color: white;
+            }
+
+            .confirm-btn-proceed:hover {
+                background: #3730a3;
+                transform: translateY(-1px);
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            @keyframes slideUp {
+                from { 
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to { 
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     getUploadStatus() {
         return {
-            birthCert: this.uploadedFiles.has('birth-cert') || sessionStorage.getItem('document_birth-cert') !== null,
-            reportCard: this.uploadedFiles.has('report-card') || sessionStorage.getItem('document_report-card') !== null,
-            idPhoto: this.uploadedFiles.has('id-photo') || sessionStorage.getItem('document_id-photo') !== null,
-            moralCert: this.uploadedFiles.has('moral-cert') || sessionStorage.getItem('document_moral-cert') !== null
+            birthCert: this.hasDocument('birth-cert'),
+            reportCard: this.hasDocument('report-card'),
+            idPhoto: this.hasDocument('id-photo'),
+            moralCert: this.hasDocument('moral-cert')
         };
     }
 }
@@ -586,44 +877,11 @@ class DocumentUploader {
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
     const uploader = new DocumentUploader();
-    
-    // Modify next button behavior to allow proceeding without all documents
-    const nextButton = document.querySelector('.button-primary');
-    if (nextButton) {
-        // Remove the default onclick
-        nextButton.removeAttribute('onclick');
-        
-        nextButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Save the current upload status
-            uploader.saveDocumentStatus();
-            
-            // Ask for confirmation if documents are missing
-            if (uploader.proceedWithMissingDocuments()) {
-                // Proceed to next page
-                window.location.href = 'review.html';
-            }
-        });
-    }
-    
-    // Previous button functionality
-    const prevButton = document.querySelector('.button-secondary');
-    if (prevButton) {
-        prevButton.removeAttribute('onclick');
-        prevButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Save current status before going back
-            uploader.saveDocumentStatus();
-            window.location.href = 'applicationform.html';
-        });
-    }
 });
 
 // Clean up URLs when page unloads
 window.addEventListener('beforeunload', () => {
-    // Note: File URLs stored in sessionStorage will be recreated when needed
-    // This cleanup is just for the current page session
+    // Clean up any blob URLs that were created
     document.querySelectorAll('input[type="file"]').forEach(input => {
         if (input.files) {
             Array.from(input.files).forEach(file => {
