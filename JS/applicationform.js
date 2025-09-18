@@ -46,6 +46,7 @@ class PhilippineLocationSelector {
             if (selectedCode) await this.loadCities(selectedCode);
         } catch (error) {
             console.error("Error loading provinces:", error);
+            this.showLocationError(this.provinceSelect, "Failed to load provinces");
         }
     }
 
@@ -77,6 +78,7 @@ class PhilippineLocationSelector {
             }
         } catch (error) {
             console.error("Error loading cities:", error);
+            this.showLocationError(this.citySelect, "Failed to load cities");
         }
     }
 
@@ -105,7 +107,18 @@ class PhilippineLocationSelector {
             this.barangaySelect.disabled = false;
         } catch (error) {
             console.error("Error loading barangays:", error);
+            this.showLocationError(this.barangaySelect, "Failed to load barangays");
         }
+    }
+
+    showLocationError(element, message) {
+        const errorOption = document.createElement("option");
+        errorOption.value = "";
+        errorOption.textContent = message;
+        errorOption.disabled = true;
+        errorOption.selected = true;
+        element.innerHTML = "";
+        element.appendChild(errorOption);
     }
 
     clearCities() {
@@ -122,77 +135,585 @@ class PhilippineLocationSelector {
     }
 }
 
-// Auto-save form data to sessionStorage
-function autoSaveFormData() {
-    const form = document.getElementById('applicationForm');
-    const formData = new FormData(form);
-    const data = {};
-    
-    // Collect all form data
-    for (let [key, value] of formData.entries()) {
-        if (data[key]) {
-            // Handle multiple values (checkboxes with same name)
-            if (Array.isArray(data[key])) {
-                data[key].push(value);
-            } else {
-                data[key] = [data[key], value];
+// Enhanced Form Validator
+class FormValidator {
+    constructor(formId) {
+        this.form = document.getElementById(formId);
+        this.errors = new Map();
+        this.setupValidation();
+    }
+
+    setupValidation() {
+        // Real-time validation for all inputs
+        const inputs = this.form.querySelectorAll('input, select, textarea');
+        
+        inputs.forEach(input => {
+            // Validate on blur
+            input.addEventListener('blur', () => this.validateField(input));
+            
+            // Clear errors on input
+            input.addEventListener('input', () => this.clearFieldError(input));
+            
+            // Special handling for radio and checkbox groups
+            if (input.type === 'radio' || input.type === 'checkbox') {
+                input.addEventListener('change', () => {
+                    this.clearFieldError(input);
+                    this.validateField(input);
+                });
+            }
+        });
+    }
+
+    validateField(field) {
+        // Skip disabled fields
+        if (field.disabled) return true;
+
+        const fieldName = field.name || field.id;
+        let isValid = true;
+        let errorMessage = '';
+
+        // Required field validation
+        if (field.hasAttribute('required') || this.isConditionallyRequired(field)) {
+            if (field.type === 'radio' || field.type === 'checkbox') {
+                const group = this.form.querySelectorAll(`[name="${fieldName}"]:checked`);
+                if (group.length === 0) {
+                    isValid = false;
+                    errorMessage = this.getFieldLabel(field) + ' is required';
+                }
+            } else if (!field.value || field.value.trim() === '') {
+                isValid = false;
+                errorMessage = this.getFieldLabel(field) + ' is required';
+            }
+        }
+
+        // Additional validations
+        if (isValid && field.value) {
+            // Email validation
+            if (field.type === 'email') {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(field.value)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid email address';
+                }
+            }
+
+            // Phone number validation
+            if (field.type === 'tel') {
+                const phoneRegex = /^(09|\+639)\d{9}$/;
+                if (field.value && !phoneRegex.test(field.value.replace(/[\s-]/g, ''))) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid Philippine mobile number';
+                }
+            }
+
+            // LRN validation
+            if (field.id === 'lrn') {
+                if (field.value.length !== 12 || !/^\d+$/.test(field.value)) {
+                    isValid = false;
+                    errorMessage = 'LRN must be exactly 12 digits';
+                }
+            }
+
+            // Age validation
+            if (field.id === 'age') {
+                const age = parseInt(field.value);
+                if (age < 3 || age > 25) {
+                    isValid = false;
+                    errorMessage = 'Age must be between 3 and 25';
+                }
+            }
+
+            // School Year format validation
+            if (field.id === 'schoolYear') {
+                const syRegex = /^\d{4}-\d{4}$/;
+                if (!syRegex.test(field.value)) {
+                    isValid = false;
+                    errorMessage = 'Format should be YYYY-YYYY (e.g., 2024-2025)';
+                }
+            }
+        }
+
+        if (!isValid) {
+            this.showFieldError(field, errorMessage);
+            this.errors.set(fieldName, errorMessage);
+        } else {
+            this.clearFieldError(field);
+            this.errors.delete(fieldName);
+        }
+
+        return isValid;
+    }
+
+    isConditionallyRequired(field) {
+        // Check if field is in returning learner section and required
+        const returningSection = document.getElementById('returningLearnerSection');
+        if (returningSection && returningSection.contains(field)) {
+            const returningYes = document.getElementById('returningYes');
+            return returningYes && returningYes.checked;
+        }
+        return false;
+    }
+
+    showFieldError(field, message) {
+        // Visual indication
+        if (field.type === 'radio' || field.type === 'checkbox') {
+            const container = field.closest('.radio-group, .checkbox-group, .modality-grid');
+            if (container) {
+                container.style.border = '2px solid var(--danger)';
+                container.style.borderRadius = '8px';
+                container.style.padding = '8px';
             }
         } else {
-            data[key] = value;
+            field.style.borderColor = 'var(--danger)';
+            field.classList.add('error-highlight');
+        }
+
+        // Show error message for specific fields
+        if (field.name === 'learningModality') {
+            this.showModalityError();
         }
     }
-    
-    // Also save checkbox states for unchecked boxes
-    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        if (!checkbox.checked && checkbox.name === 'learningModality') {
-            // Track which modalities were considered but not selected
-            if (!data.learningModalityState) {
-                data.learningModalityState = [];
+
+    clearFieldError(field) {
+        // Clear visual indication
+        if (field.type === 'radio' || field.type === 'checkbox') {
+            const container = field.closest('.radio-group, .checkbox-group, .modality-grid');
+            if (container) {
+                container.style.border = '';
+                container.style.padding = '';
             }
-            data.learningModalityState.push(checkbox.value + '_unchecked');
+        } else {
+            field.style.borderColor = '';
+            field.classList.remove('error-highlight');
         }
-    });
-    
-    // Save the "same address" checkbox state explicitly
-    data.sameAddressChecked = document.getElementById('sameAddress').checked;
-    
-    // Save to sessionStorage (clears when browser/tab closes)
-    sessionStorage.setItem('applicationFormData', JSON.stringify(data));
+
+        // Clear error messages
+        if (field.name === 'learningModality') {
+            this.clearModalityError();
+        }
+    }
+
+    showModalityError() {
+        const modalityGrid = document.querySelector('.modality-grid');
+        const modalityCard = modalityGrid?.closest('.form-card');
+        
+        if (!modalityCard) return;
+
+        // Check if error already exists
+        let errorDiv = modalityCard.querySelector('.modality-error-message');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'modality-error-message fade-in';
+            errorDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; color: var(--danger); 
+                     background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; 
+                     padding: 10px 14px; margin-top: 12px; font-size: 0.9rem; font-weight: 500;">
+                    <span style="font-size: 1.1rem;">⚠️</span>
+                    <span>Please select at least one learning modality preference</span>
+                </div>
+            `;
+            modalityGrid.insertAdjacentElement('afterend', errorDiv);
+        }
+    }
+
+    clearModalityError() {
+        const errorDiv = document.querySelector('.modality-error-message');
+        if (errorDiv) {
+            errorDiv.classList.add('fade-out');
+            setTimeout(() => errorDiv.remove(), 300);
+        }
+    }
+
+    getFieldLabel(field) {
+        const label = this.form.querySelector(`label[for="${field.id}"]`);
+        if (label) {
+            return label.textContent.replace('*', '').trim();
+        }
+        return field.name || field.id;
+    }
+
+    validateForm() {
+        this.errors.clear();
+        let isValid = true;
+        let firstInvalidField = null;
+
+        // Clear all previous errors
+        this.form.querySelectorAll('.error-highlight').forEach(el => {
+            el.classList.remove('error-highlight');
+            el.style.borderColor = '';
+        });
+
+        // Validate all required fields
+        const requiredFields = this.form.querySelectorAll('[required]:not(:disabled)');
+        requiredFields.forEach(field => {
+            if (!this.validateField(field) && !firstInvalidField) {
+                firstInvalidField = field;
+                isValid = false;
+            }
+        });
+
+        // Special validations
+        isValid = this.validateSpecialCases(firstInvalidField) && isValid;
+
+        if (!isValid && firstInvalidField) {
+            this.scrollToError(firstInvalidField);
+            this.showSummaryError();
+        }
+
+        return isValid;
+    }
+
+    validateSpecialCases(firstInvalidField) {
+        let isValid = true;
+
+        // Check With LRN selection
+        const withLrnYes = document.getElementById('withLrnYes');
+        const withLrnNo = document.getElementById('withLrnNo');
+        if (!withLrnYes.checked && !withLrnNo.checked) {
+            this.showFieldError(withLrnYes, 'Please select whether the student has an LRN');
+            if (!firstInvalidField) firstInvalidField = withLrnYes;
+            isValid = false;
+        }
+
+        // Check Returning Learner selection
+        const returningYes = document.getElementById('returningYes');
+        const returningNo = document.getElementById('returningNo');
+        if (!returningYes.checked && !returningNo.checked) {
+            this.showFieldError(returningYes, 'Please select whether the student is a Returning Learner');
+            if (!firstInvalidField) firstInvalidField = returningYes;
+            isValid = false;
+        }
+
+        // Check learning modality
+        const modalityChecked = document.querySelectorAll('input[name="learningModality"]:checked');
+        if (modalityChecked.length === 0) {
+            const firstModality = document.getElementById('faceToFace');
+            this.showFieldError(firstModality, 'Please select at least one learning modality');
+            if (!firstInvalidField) firstInvalidField = firstModality;
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    scrollToError(field) {
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Highlight temporarily
+        setTimeout(() => {
+            if (field.type !== 'radio' && field.type !== 'checkbox') {
+                field.focus();
+                field.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    field.style.backgroundColor = '';
+                }, 3000);
+            }
+        }, 500);
+    }
+
+    showSummaryError() {
+        // Create a summary of all errors
+        if (this.errors.size > 0) {
+            const errorList = Array.from(this.errors.values()).slice(0, 3);
+            const message = `Please correct the following:\n• ${errorList.join('\n• ')}`;
+            
+            // Use a custom notification instead of alert
+            this.showNotification(message, 'error');
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Remove existing notification
+        const existing = document.querySelector('.form-notification');
+        if (existing) existing.remove();
+
+        const notification = document.createElement('div');
+        notification.className = `form-notification form-notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            max-width: 400px;
+            padding: 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid ${type === 'error' ? 'var(--danger)' : 'var(--primary)'};
+        `;
+
+        notification.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1; padding-right: 12px;">
+                    <strong style="color: ${type === 'error' ? 'var(--danger)' : 'var(--primary)'};">
+                        ${type === 'error' ? 'Validation Error' : 'Information'}
+                    </strong>
+                    <div style="margin-top: 4px; font-size: 0.9rem; white-space: pre-line;">${message}</div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; cursor: pointer; font-size: 1.2rem; 
+                               color: var(--gray); padding: 0;">×</button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
 }
 
-// Initialize page when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-    // Initialize location dropdowns
-    const birthSelector = new PhilippineLocationSelector({
-        provinceId: "birthProvince",
-        cityId: "birthCity",
-    });
+// Auto-save form data to sessionStorage
+class FormAutoSave {
+    constructor(formId, storageKey) {
+        this.form = document.getElementById(formId);
+        this.storageKey = storageKey;
+        this.saveTimeout = null;
+        this.setupAutoSave();
+    }
 
-    const currentSelector = new PhilippineLocationSelector({
-        provinceId: "currentProvince",
-        cityId: "currentMunicipality",
-        barangayId: "currentBarangay",
-    });
+    setupAutoSave() {
+        const formElements = this.form.querySelectorAll('input, select, textarea');
+        
+        formElements.forEach(element => {
+            if (element.type === 'checkbox' || element.type === 'radio') {
+                element.addEventListener('change', () => this.debouncedSave());
+            } else if (element.tagName === 'SELECT') {
+                element.addEventListener('change', () => this.debouncedSave());
+            } else {
+                element.addEventListener('input', () => this.debouncedSave(500));
+            }
+        });
 
-    const permSelector = new PhilippineLocationSelector({
-        provinceId: "permProvince",
-        cityId: "permMunicipality",
-        barangayId: "permBarangay",
-    });
+        // Load saved data on initialization
+        this.loadFormData();
+    }
 
-    // LRN Control based on With LRN selection
-    function toggleLRNField() {
+    debouncedSave(delay = 100) {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => this.saveFormData(), delay);
+    }
+
+    saveFormData() {
+        const formData = new FormData(this.form);
+        const data = {};
+        
+        // Collect all form data
+        for (let [key, value] of formData.entries()) {
+            if (data[key]) {
+                // Handle multiple values
+                if (Array.isArray(data[key])) {
+                    data[key].push(value);
+                } else {
+                    data[key] = [data[key], value];
+                }
+            } else {
+                data[key] = value;
+            }
+        }
+        
+        // Save checkbox states
+        data.sameAddressChecked = document.getElementById('sameAddress')?.checked || false;
+        
+        // Save timestamp
+        data.lastSaved = new Date().toISOString();
+        
+        sessionStorage.setItem(this.storageKey, JSON.stringify(data));
+        
+        // Show save indicator
+        this.showSaveIndicator();
+    }
+
+    loadFormData() {
+        const savedData = sessionStorage.getItem(this.storageKey);
+        if (!savedData) return;
+
+        const data = JSON.parse(savedData);
+        
+        // Restore form fields
+        Object.keys(data).forEach(key => {
+            if (key === 'sameAddressChecked' || key === 'lastSaved') return;
+            
+            const elements = document.querySelectorAll(`[name="${key}"]`);
+            elements.forEach(element => {
+                if (element.type === 'radio') {
+                    element.checked = element.value === data[key];
+                } else if (element.type === 'checkbox') {
+                    if (Array.isArray(data[key])) {
+                        element.checked = data[key].includes(element.value);
+                    } else {
+                        element.checked = element.value === data[key];
+                    }
+                } else {
+                    element.value = data[key] || '';
+                }
+            });
+        });
+
+        // Show restore message
+        if (data.lastSaved) {
+            const timeDiff = new Date() - new Date(data.lastSaved);
+            const minutes = Math.floor(timeDiff / 60000);
+            if (minutes < 60) {
+                this.showNotification(`Form data restored from ${minutes} minute(s) ago`, 'success');
+            }
+        }
+    }
+
+    showSaveIndicator() {
+        const existing = document.querySelector('.save-indicator');
+        if (existing) existing.remove();
+
+        const indicator = document.createElement('div');
+        indicator.className = 'save-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--secondary);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            animation: fadeIn 0.3s ease;
+            z-index: 1000;
+        `;
+        indicator.textContent = '✓ Saved';
+        
+        document.body.appendChild(indicator);
+        
+        setTimeout(() => {
+            indicator.classList.add('fade-out');
+            setTimeout(() => indicator.remove(), 300);
+        }, 2000);
+    }
+
+    showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${type === 'success' ? 'var(--secondary)' : 'var(--primary)'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            animation: slideDown 0.3s ease;
+            z-index: 9999;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    clearSavedData() {
+        sessionStorage.removeItem(this.storageKey);
+    }
+}
+
+// Main Application Controller
+class ApplicationFormController {
+    constructor() {
+        this.validator = null;
+        this.autoSave = null;
+        this.locationSelectors = {};
+        this.init();
+    }
+
+    init() {
+        this.setupLocationSelectors();
+        this.setupFormControls();
+        this.setupValidator();
+        this.setupAutoSave();
+        this.restoreFormState();
+    }
+
+    setupLocationSelectors() {
+        this.locationSelectors.birth = new PhilippineLocationSelector({
+            provinceId: "birthProvince",
+            cityId: "birthCity",
+        });
+
+        this.locationSelectors.current = new PhilippineLocationSelector({
+            provinceId: "currentProvince",
+            cityId: "currentMunicipality",
+            barangayId: "currentBarangay",
+        });
+
+        this.locationSelectors.permanent = new PhilippineLocationSelector({
+            provinceId: "permProvince",
+            cityId: "permMunicipality",
+            barangayId: "permBarangay",
+        });
+    }
+
+    setupFormControls() {
+        // LRN Control
+        const withLrnYes = document.getElementById('withLrnYes');
+        const withLrnNo = document.getElementById('withLrnNo');
+        
+        if (withLrnYes && withLrnNo) {
+            withLrnYes.addEventListener('change', () => this.toggleLRNField());
+            withLrnNo.addEventListener('change', () => this.toggleLRNField());
+        }
+
+        // Returning Learner Control
+        const returningYes = document.getElementById('returningYes');
+        const returningNo = document.getElementById('returningNo');
+        
+        if (returningYes && returningNo) {
+            returningYes.addEventListener('change', () => this.toggleReturningLearnerSection());
+            returningNo.addEventListener('change', () => this.toggleReturningLearnerSection());
+        }
+
+        // Same Address Toggle
+        const sameAddress = document.getElementById('sameAddress');
+        if (sameAddress) {
+            sameAddress.addEventListener('change', () => this.togglePermanentAddress());
+        }
+
+        // Auto-calculate Age
+        const birthdateInput = document.getElementById('birthDate');
+        if (birthdateInput) {
+            birthdateInput.addEventListener('change', () => this.calculateAge());
+        }
+
+        // Auto-uppercase text inputs
+        const textInputs = document.querySelectorAll('input[type="text"]:not([type="email"]):not(#lrn)');
+        textInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+        });
+
+        // Initialize conditional sections
+        this.toggleReturningLearnerSection();
+    }
+
+    toggleLRNField() {
         const withLrnNo = document.getElementById('withLrnNo');
         const lrnInput = document.getElementById('lrn');
         
+        if (!lrnInput) return;
+
         if (withLrnNo.checked) {
             lrnInput.value = '';
             lrnInput.disabled = true;
             lrnInput.removeAttribute('required');
             lrnInput.placeholder = 'Not Applicable';
             lrnInput.style.backgroundColor = '#f3f4f6';
-            lrnInput.style.borderColor = ''; // Clear any validation styling
+            lrnInput.style.borderColor = '';
         } else {
             lrnInput.disabled = false;
             lrnInput.setAttribute('required', 'required');
@@ -202,609 +723,527 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Add event listeners for LRN radio buttons
-    document.getElementById('withLrnYes').addEventListener('change', toggleLRNField);
-    document.getElementById('withLrnNo').addEventListener('change', toggleLRNField);
-
-    // Control Returning Learner section with ALL FIELDS REQUIRED
-    function toggleReturningLearnerSection() {
+    toggleReturningLearnerSection() {
         const returningYes = document.getElementById('returningYes');
         const section = document.getElementById('returningLearnerSection');
-        const lastGradeLevel = document.getElementById('lastGradeLevel');
-        const lastSchoolYear = document.getElementById('lastSchoolYear');
-        const lastSchoolAttended = document.getElementById('lastSchoolAttended');
-        const schoolId = document.getElementById('schoolId');
+        
+        if (!section) return;
+
+        const fields = ['lastGradeLevel', 'lastSchoolYear', 'lastSchoolAttended', 'schoolId'];
         const conditionalRequired = document.querySelectorAll('.conditional-required');
         
         if (returningYes.checked) {
-            // Enable section and make ALL fields REQUIRED
             section.classList.remove('conditional-disabled');
             
-            // Enable and require ALL fields
-            lastGradeLevel.disabled = false;
-            lastGradeLevel.setAttribute('required', 'required');
-            lastGradeLevel.style.backgroundColor = '';
-            
-            lastSchoolYear.disabled = false;
-            lastSchoolYear.setAttribute('required', 'required');
-            lastSchoolYear.style.backgroundColor = '';
-            
-            lastSchoolAttended.disabled = false;
-            lastSchoolAttended.setAttribute('required', 'required');
-            lastSchoolAttended.style.backgroundColor = '';
-            
-            schoolId.disabled = false;
-            schoolId.setAttribute('required', 'required');
-            schoolId.style.backgroundColor = '';
-            
-            // Show required asterisks
-            conditionalRequired.forEach(asterisk => {
-                asterisk.classList.add('show');
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.disabled = false;
+                    field.setAttribute('required', 'required');
+                    field.style.backgroundColor = '';
+                }
             });
+            
+            conditionalRequired.forEach(asterisk => asterisk.classList.add('show'));
         } else {
-            // Disable section and remove required - CANNOT BE EDITED
             section.classList.add('conditional-disabled');
             
-            // Clear and disable ALL fields
-            lastGradeLevel.value = '';
-            lastGradeLevel.disabled = true;
-            lastGradeLevel.removeAttribute('required');
-            lastGradeLevel.style.backgroundColor = '#f3f4f6';
-            lastGradeLevel.style.borderColor = ''; // Clear validation styling
-            
-            lastSchoolYear.value = '';
-            lastSchoolYear.disabled = true;
-            lastSchoolYear.removeAttribute('required');
-            lastSchoolYear.style.backgroundColor = '#f3f4f6';
-            lastSchoolYear.style.borderColor = ''; // Clear validation styling
-            
-            lastSchoolAttended.value = '';
-            lastSchoolAttended.disabled = true;
-            lastSchoolAttended.removeAttribute('required');
-            lastSchoolAttended.style.backgroundColor = '#f3f4f6';
-            lastSchoolAttended.style.borderColor = ''; // Clear validation styling
-            
-            schoolId.value = '';
-            schoolId.disabled = true;
-            schoolId.removeAttribute('required');
-            schoolId.style.backgroundColor = '#f3f4f6';
-            schoolId.style.borderColor = ''; // Clear validation styling
-            
-            // Hide required asterisks
-            conditionalRequired.forEach(asterisk => {
-                asterisk.classList.remove('show');
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.value = '';
+                    field.disabled = true;
+                    field.removeAttribute('required');
+                    field.style.backgroundColor = '#f3f4f6';
+                    field.style.borderColor = '';
+                }
             });
+            
+            conditionalRequired.forEach(asterisk => asterisk.classList.remove('show'));
         }
     }
 
-    // Add event listeners for Returning Learner radio buttons
-    document.getElementById('returningYes').addEventListener('change', toggleReturningLearnerSection);
-    document.getElementById('returningNo').addEventListener('change', toggleReturningLearnerSection);
-
-    // Initialize returning learner section as disabled by default
-    toggleReturningLearnerSection();
-
-    // Same Address Toggle
-    window.togglePermanentAddress = async function() {
-        const same = document.getElementById("sameAddress").checked;
+    async togglePermanentAddress() {
+        const same = document.getElementById('sameAddress').checked;
         const section = document.getElementById('permanentAddressSection');
-
-        const fields = [
-            "permProvince",
-            "permMunicipality",
-            "permBarangay",
-            "permHouseNo",
-            "permZipCode",
-        ];
+        const fields = ['permProvince', 'permMunicipality', 'permBarangay', 'permHouseNo', 'permZipCode'];
 
         if (same) {
             section.classList.remove('show');
             
-            // Copy values from current to permanent
-            const currentProvince = document.getElementById("currentProvince").value;
-            const currentMunicipality = document.getElementById("currentMunicipality").value;
-            const currentBarangay = document.getElementById("currentBarangay").value;
+            // Copy values
+            const currentProvince = document.getElementById('currentProvince').value;
+            const currentMunicipality = document.getElementById('currentMunicipality').value;
+            const currentBarangay = document.getElementById('currentBarangay').value;
 
+            const permSelector = this.locationSelectors.permanent;
             await permSelector.loadProvinces(currentProvince);
             await permSelector.loadCities(currentProvince, currentMunicipality);
             await permSelector.loadBarangays(currentMunicipality, currentBarangay);
 
-            document.getElementById("permHouseNo").value = 
-                document.getElementById("currentHouseNo").value;
-            document.getElementById("permZipCode").value = 
-                document.getElementById("currentZipCode").value;
+            document.getElementById('permHouseNo').value = document.getElementById('currentHouseNo').value;
+            document.getElementById('permZipCode').value = document.getElementById('currentZipCode').value;
 
-            // Disable all permanent fields
-            fields.forEach((id) => {
+            // Disable fields
+            fields.forEach(id => {
                 const field = document.getElementById(id);
-                field.setAttribute("disabled", true);
-                if (field.hasAttribute('required')) {
-                    field.setAttribute('data-required', 'true');
-                    field.removeAttribute('required');
+                if (field) {
+                    field.setAttribute('disabled', true);
+                    if (field.hasAttribute('required')) {
+                        field.setAttribute('data-required', 'true');
+                        field.removeAttribute('required');
+                    }
                 }
             });
 
-            // Auto-update if current address changes
-            ["currentProvince", "currentMunicipality", "currentBarangay", "currentHouseNo", "currentZipCode"].forEach((id) => {
-                const element = document.getElementById(id);
-                element.removeEventListener("change", updatePermanentFromCurrent);
-                element.addEventListener("change", updatePermanentFromCurrent);
-            });
+            // Setup auto-update listeners
+            this.setupAddressSync();
         } else {
             section.classList.add('show');
             
-            // Re-enable permanent fields
-            fields.forEach((id) => {
+            // Re-enable fields
+            fields.forEach(id => {
                 const field = document.getElementById(id);
-                field.removeAttribute("disabled");
-                if (field.getAttribute('data-required') === 'true') {
-                    field.setAttribute('required', 'true');
-                    field.removeAttribute('data-required');
-                }
-                // Keep municipality and barangay disabled initially
-                if (id === 'permMunicipality' || id === 'permBarangay') {
-                    field.disabled = true;
+                if (field) {
+                    field.removeAttribute('disabled');
+                    if (field.getAttribute('data-required') === 'true') {
+                        field.setAttribute('required', 'true');
+                        field.removeAttribute('data-required');
+                    }
+                    if (id === 'permMunicipality' || id === 'permBarangay') {
+                        field.disabled = true;
+                    }
                 }
             });
 
             // Remove auto-update listeners
-            ["currentProvince", "currentMunicipality", "currentBarangay", "currentHouseNo", "currentZipCode"].forEach((id) => {
-                document.getElementById(id).removeEventListener("change", updatePermanentFromCurrent);
-            });
+            this.removeAddressSync();
         }
+
+        // Trigger auto-save
+        if (this.autoSave) {
+            this.autoSave.saveFormData();
+        }
+    }
+
+    setupAddressSync() {
+        const currentFields = ['currentProvince', 'currentMunicipality', 'currentBarangay', 'currentHouseNo', 'currentZipCode'];
+        currentFields.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.removeEventListener('change', this.updatePermanentFromCurrent);
+                element.addEventListener('change', this.updatePermanentFromCurrent.bind(this));
+            }
+        });
+    }
+
+    removeAddressSync() {
+        const currentFields = ['currentProvince', 'currentMunicipality', 'currentBarangay', 'currentHouseNo', 'currentZipCode'];
+        currentFields.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.removeEventListener('change', this.updatePermanentFromCurrent);
+            }
+        });
+    }
+
+    async updatePermanentFromCurrent() {
+        if (document.getElementById('sameAddress').checked) {
+            await this.togglePermanentAddress();
+        }
+    }
+
+    calculateAge() {
+        const birthdateInput = document.getElementById('birthDate');
+        const ageInput = document.getElementById('age');
         
-        // Auto-save after toggle
-        autoSaveFormData();
-    }
+        if (!birthdateInput || !ageInput) return;
 
-    // Function to update permanent address from current
-    async function updatePermanentFromCurrent() {
-        if (document.getElementById("sameAddress").checked) {
-            await togglePermanentAddress();
-        }
-    }
-
-    // Initialize permanent address section as visible
-    const section = document.getElementById('permanentAddressSection');
-    section.classList.add('show');
-
-    // Auto-calculate Age from Birthdate
-    const birthdateInput = document.getElementById("birthDate");
-    const ageInput = document.getElementById("age");
-
-    birthdateInput.addEventListener("change", () => {
         const birthDate = new Date(birthdateInput.value);
         if (!isNaN(birthDate)) {
             const today = new Date();
             let age = today.getFullYear() - birthDate.getFullYear();
             const m = today.getMonth() - birthDate.getMonth();
 
-            // Adjust if birthday hasn't happened yet this year
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
                 age--;
             }
 
-            ageInput.value = age >= 0 ? age : "";
+            ageInput.value = age >= 0 ? age : '';
         } else {
-            ageInput.value = "";
+            ageInput.value = '';
         }
-    });
-
-    // Auto-uppercase text inputs (exclude email and excluded fields)
-    const textInputs = document.querySelectorAll('input[type="text"]:not([type="email"]):not(#lrn)');
-    textInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            this.value = this.value.toUpperCase();
-        });
-    });
-
-    // Load saved data from sessionStorage
-    const savedData = sessionStorage.getItem('applicationFormData');
-    if (savedData) {
-        const data = JSON.parse(savedData);
-        
-        // Restore all form fields
-        Object.keys(data).forEach(key => {
-            if (key === 'sameAddressChecked' || key === 'learningModalityState') {
-                // Skip these special keys
-                return;
-            }
-            
-            const elements = document.querySelectorAll(`[name="${key}"]`);
-            
-            elements.forEach(element => {
-                if (element.type === 'radio') {
-                    // For radio buttons, check if value matches
-                    element.checked = element.value === data[key];
-                } else if (element.type === 'checkbox') {
-                    // For checkboxes, check if value is in array or matches
-                    if (Array.isArray(data[key])) {
-                        element.checked = data[key].includes(element.value);
-                    } else {
-                        element.checked = element.value === data[key];
-                    }
-                } else {
-                    // For other inputs
-                    element.value = data[key] || '';
-                }
-            });
-        });
-        
-        // After restoring data, check states
-        if (data.withLrn === 'NO') {
-            toggleLRNField();
-        }
-        
-        if (data.returning === 'YES') {
-            toggleReturningLearnerSection();
-        }
-        
-        // Restore same address checkbox state
-        if (data.sameAddressChecked) {
-            document.getElementById('sameAddress').checked = true;
-            // Don't call togglePermanentAddress yet, wait for dropdowns to load
-        }
-        
-        // Trigger location dropdowns if data exists
-        const loadPromises = [];
-        
-        if (data.birthProvince) {
-            loadPromises.push(
-                birthSelector.loadProvinces(data.birthProvince).then(() => {
-                    if (data.birthCity) {
-                        return birthSelector.loadCities(data.birthProvince, data.birthCity);
-                    }
-                })
-            );
-        }
-        
-        if (data.currentProvince) {
-            loadPromises.push(
-                currentSelector.loadProvinces(data.currentProvince).then(() => {
-                    if (data.currentMunicipality) {
-                        return currentSelector.loadCities(data.currentProvince, data.currentMunicipality).then(() => {
-                            if (data.currentBarangay) {
-                                return currentSelector.loadBarangays(data.currentMunicipality, data.currentBarangay);
-                            }
-                        });
-                    }
-                })
-            );
-        }
-        
-        if (data.permProvince && !data.sameAddressChecked) {
-            loadPromises.push(
-                permSelector.loadProvinces(data.permProvince).then(() => {
-                    if (data.permMunicipality) {
-                        return permSelector.loadCities(data.permProvince, data.permMunicipality).then(() => {
-                            if (data.permBarangay) {
-                                return permSelector.loadBarangays(data.permMunicipality, data.permBarangay);
-                            }
-                        });
-                    }
-                })
-            );
-        }
-        
-        // After all dropdowns are loaded, handle same address checkbox
-        Promise.all(loadPromises).then(() => {
-            if (data.sameAddressChecked) {
-                togglePermanentAddress();
-            }
-        });
     }
 
-    // Set up auto-save on any form change
-    const form = document.getElementById('applicationForm');
-    const formElements = form.querySelectorAll('input, select, textarea');
-    
-    formElements.forEach(element => {
-        // Add appropriate event listeners based on element type
-        if (element.type === 'checkbox' || element.type === 'radio') {
-            element.addEventListener('change', autoSaveFormData);
-        } else if (element.tagName === 'SELECT') {
-            element.addEventListener('change', autoSaveFormData);
-        } else {
-            // For text inputs, save on input but debounce to avoid too frequent saves
-            let saveTimeout;
-            element.addEventListener('input', () => {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(autoSaveFormData, 500); // Save after 500ms of no typing
-            });
+    setupValidator() {
+        this.validator = new FormValidator('applicationForm');
+    }
+
+    setupAutoSave() {
+        this.autoSave = new FormAutoSave('applicationForm', 'applicationFormData');
+    }
+
+    async restoreFormState() {
+        const savedData = sessionStorage.getItem('applicationFormData');
+        if (!savedData) return;
+
+        const data = JSON.parse(savedData);
+        
+        // Restore conditional states after data is loaded
+        setTimeout(async () => {
+            // Restore LRN state
+            if (data.withLrn === 'NO') {
+                this.toggleLRNField();
+            }
+            
+            // Restore returning learner state
+            if (data.returning === 'YES') {
+                this.toggleReturningLearnerSection();
+            }
+            
+            // Restore location dropdowns
+            await this.restoreLocationData(data);
+            
+            // Restore same address state
+            if (data.sameAddressChecked) {
+                document.getElementById('sameAddress').checked = true;
+                await this.togglePermanentAddress();
+            }
+        }, 100);
+    }
+
+    async restoreLocationData(data) {
+        const loadPromises = [];
+        
+        // Birth location
+        if (data.birthProvince) {
+            loadPromises.push(
+                this.locationSelectors.birth.loadProvinces(data.birthProvince).then(() => {
+                    if (data.birthCity) {
+                        return this.locationSelectors.birth.loadCities(data.birthProvince, data.birthCity);
+                    }
+                })
+            );
         }
-    });
+        
+        // Current location
+        if (data.currentProvince) {
+            loadPromises.push(
+                this.locationSelectors.current.loadProvinces(data.currentProvince).then(() => {
+                    if (data.currentMunicipality) {
+                        return this.locationSelectors.current.loadCities(data.currentProvince, data.currentMunicipality).then(() => {
+                            if (data.currentBarangay) {
+                                return this.locationSelectors.current.loadBarangays(data.currentMunicipality, data.currentBarangay);
+                            }
+                        });
+                    }
+                })
+            );
+        }
+        
+        // Permanent location (if not same as current)
+        if (data.permProvince && !data.sameAddressChecked) {
+            loadPromises.push(
+                this.locationSelectors.permanent.loadProvinces(data.permProvince).then(() => {
+                    if (data.permMunicipality) {
+                        return this.locationSelectors.permanent.loadCities(data.permProvince, data.permMunicipality).then(() => {
+                            if (data.permBarangay) {
+                                return this.locationSelectors.permanent.loadBarangays(data.permMunicipality, data.permBarangay);
+                            }
+                        });
+                    }
+                })
+            );
+        }
+        
+        await Promise.all(loadPromises);
+    }
 
-    // Also save when LRN or Returning Learner toggles change
-    document.getElementById('withLrnYes').addEventListener('change', autoSaveFormData);
-    document.getElementById('withLrnNo').addEventListener('change', autoSaveFormData);
-    document.getElementById('returningYes').addEventListener('change', autoSaveFormData);
-    document.getElementById('returningNo').addEventListener('change', autoSaveFormData);
-
-    // Form submission handler with validation
-    window.handleSubmit = function(event) {
+    handleSubmit(event) {
         if (event) {
             event.preventDefault();
             event.stopPropagation();
         }
         
-        const form = document.getElementById('applicationForm');
-        let isValid = true;
-        let firstInvalidField = null;
-        let errorMessage = '';
-        
-        // Clear previous error styling
-        document.querySelectorAll('.error-highlight').forEach(el => {
-            el.classList.remove('error-highlight');
-            el.style.borderColor = '';
-            el.style.backgroundColor = '';
-        });
-        
-        // Check all required fields that are not disabled
-        const requiredFields = form.querySelectorAll('[required]:not(:disabled)');
-        
-        requiredFields.forEach(field => {
-            if (!field.value || field.value.trim() === '') {
-                isValid = false;
-                field.style.borderColor = 'var(--danger)';
-                field.classList.add('error-highlight');
-                
-                // Set first invalid field for focus
-                if (!firstInvalidField) {
-                    firstInvalidField = field;
-                    
-                    // Get the field label for better error message
-                    const label = form.querySelector(`label[for="${field.id}"]`);
-                    const fieldName = label ? label.textContent.replace('*', '').trim() : field.name;
-                    
-                    // Determine which section the field is in
-                    if (field.closest('#returningLearnerSection')) {
-                        errorMessage = `Please complete the required field: ${fieldName} (in Returning Learner section)`;
-                    } else if (field.closest('.form-card')) {
-                        const sectionTitle = field.closest('.form-card').querySelector('.form-title')?.textContent.trim();
-                        errorMessage = `Please complete the required field: ${fieldName}${sectionTitle ? ` (in ${sectionTitle} section)` : ''}`;
-                    } else {
-                        errorMessage = `Please complete the required field: ${fieldName}`;
-                    }
-                }
-            }
-        });
-        
-        // Special check for radio button groups
-        const radioGroups = ['withLrn', 'returning', 'sex', 'hasDisability', 'indigenousPeople', 'fourPs'];
-        radioGroups.forEach(groupName => {
-            const checked = form.querySelector(`[name="${groupName}"]:checked`);
-            const firstRadio = form.querySelector(`[name="${groupName}"]`);
-            
-            // Check if this radio group exists and is required
-            if (firstRadio && firstRadio.hasAttribute('required') && !firstRadio.disabled && !checked) {
-                isValid = false;
-                const radioContainer = firstRadio.closest('.radio-group');
-                if (radioContainer) {
-                    radioContainer.style.border = '1px solid var(--danger)';
-                    radioContainer.style.borderRadius = '4px';
-                    radioContainer.style.padding = '4px';
-                }
-                
-                if (!firstInvalidField) {
-                    firstInvalidField = firstRadio;
-                    const label = firstRadio.closest('.form-field')?.querySelector('label');
-                    const fieldName = label ? label.textContent.replace('*', '').trim() : groupName;
-                    errorMessage = `Please select an option for: ${fieldName}`;
-                }
-            }
-        });
-        
-        // Check if LRN is required and filled
-        const withLrnYes = document.getElementById('withLrnYes');
-        const withLrnNo = document.getElementById('withLrnNo');
-        const lrnInput = document.getElementById('lrn');
-        
-        // First check if With LRN is answered
-        if (!withLrnYes.checked && !withLrnNo.checked) {
-            isValid = false;
-            const radioContainer = withLrnYes.closest('.radio-group');
-            if (radioContainer) {
-                radioContainer.style.border = '1px solid var(--danger)';
-                radioContainer.style.borderRadius = '4px';
-                radioContainer.style.padding = '4px';
-            }
-            if (!firstInvalidField) {
-                firstInvalidField = withLrnYes;
-                errorMessage = 'Please select whether the student has an LRN (With LRN?)';
-            }
-        } else if (withLrnYes.checked && (!lrnInput.value || lrnInput.value.trim() === '')) {
-            isValid = false;
-            lrnInput.style.borderColor = 'var(--danger)';
-            lrnInput.classList.add('error-highlight');
-            if (!firstInvalidField) {
-                firstInvalidField = lrnInput;
-                errorMessage = 'Please enter the Learner Reference Number (LRN)';
-            }
-        }
-        
-        // Check if returning learner is answered
-        const returningYes = document.getElementById('returningYes');
-        const returningNo = document.getElementById('returningNo');
-        
-        if (!returningYes.checked && !returningNo.checked) {
-            isValid = false;
-            const radioContainer = returningYes.closest('.radio-group');
-            if (radioContainer) {
-                radioContainer.style.border = '1px solid var(--danger)';
-                radioContainer.style.borderRadius = '4px';
-                radioContainer.style.padding = '4px';
-            }
-            if (!firstInvalidField) {
-                firstInvalidField = returningYes;
-                errorMessage = 'Please select whether the student is a Returning Learner (Balik-Aral)';
-            }
-        } else if (returningYes.checked) {
-            // Check returning learner fields
-            const returningFields = [
-                { id: 'lastGradeLevel', name: 'Last Grade Level Completed' },
-                { id: 'lastSchoolYear', name: 'Last School Year Completed' },
-                { id: 'lastSchoolAttended', name: 'Last School Attended' },
-                { id: 'schoolId', name: 'School ID' }
-            ];
-            
-            returningFields.forEach(fieldInfo => {
-                const field = document.getElementById(fieldInfo.id);
-                if (!field.value || field.value.trim() === '') {
-                    isValid = false;
-                    field.style.borderColor = 'var(--danger)';
-                    field.classList.add('error-highlight');
-                    if (!firstInvalidField) {
-                        firstInvalidField = field;
-                        errorMessage = `Please complete: ${fieldInfo.name} (Required for Returning Learners)`;
-                    }
-                }
-            });
-        }
-        
-        // Check if sex is selected
-        const male = document.getElementById('male');
-        const female = document.getElementById('female');
-        
-        if (!male.checked && !female.checked) {
-            isValid = false;
-            const radioContainer = male.closest('.radio-group');
-            if (radioContainer) {
-                radioContainer.style.border = '1px solid var(--danger)';
-                radioContainer.style.borderRadius = '4px';
-                radioContainer.style.padding = '4px';
-            }
-            if (!firstInvalidField) {
-                firstInvalidField = male;
-                errorMessage = 'Please select the student\'s sex';
-            }
-        }
-        
-        // Check if at least one learning modality is selected
-        const modalityCheckboxes = document.querySelectorAll('input[name="learningModality"]:checked');
-        if (modalityCheckboxes.length === 0) {
-            isValid = false;
-            const modalitySection = document.querySelector('.modality-grid');
-            if (modalitySection) {
-                modalitySection.style.border = '2px solid var(--danger)';
-                modalitySection.style.borderRadius = '8px';
-                modalitySection.style.padding = '8px';
-            }
-            if (!firstInvalidField) {
-                firstInvalidField = document.getElementById('faceToFace');
-                errorMessage = 'Please select at least one learning modality preference';
-            }
-        }
-        
-        // If validation fails, show error and focus on first invalid field
-        if (!isValid) {
-            // Show custom alert with specific field information
-            alert(errorMessage || 'Please complete all required fields before proceeding.');
-            
-            // Scroll to and focus the first invalid field
-            if (firstInvalidField) {
-                // Add visual emphasis
-                if (firstInvalidField.type !== 'radio' && firstInvalidField.type !== 'checkbox') {
-                    firstInvalidField.style.backgroundColor = '#fff3cd';
-                    setTimeout(() => {
-                        firstInvalidField.style.backgroundColor = '';
-                    }, 3000);
-                }
-                
-                // Scroll into view with offset for better visibility
-                firstInvalidField.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-                
-                // Focus the field after scroll
-                setTimeout(() => {
-                    if (firstInvalidField.type !== 'radio' && firstInvalidField.type !== 'checkbox') {
-                        firstInvalidField.focus();
-                    }
-                }, 500);
-            }
-            
-            // CRITICAL: Return false to prevent form submission
+        // Validate form
+        if (!this.validator.validateForm()) {
             return false;
         }
         
-        // All validation passed - save one final time before navigation
-        autoSaveFormData();
+        // Save form data one final time
+        this.autoSave.saveFormData();
         
-        // Set a flag in sessionStorage to indicate successful submission from this page
+        // Set completion flag
         sessionStorage.setItem('applicationFormCompleted', 'true');
         
-        // Navigate to next page
-        window.location.href = 'uploadDocument.html';
+        // Show success message
+        this.showSuccessMessage();
         
-        // Return false to prevent default form submission
+        // Navigate to next page after a short delay
+        setTimeout(() => {
+            window.location.href = 'uploadDocument.html';
+        }, 1500);
+        
         return false;
     }
 
-    // Form validation feedback
-    const inputs = form.querySelectorAll('input, select, textarea');
+    showSuccessMessage() {
+        const message = document.createElement('div');
+        message.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--secondary);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: scaleIn 0.3s ease;
+        `;
+        message.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">✓</span>
+                <span>Form validated successfully! Proceeding to document upload...</span>
+            </div>
+        `;
+        
+        document.body.appendChild(message);
+    }
+}
+
+// Initialize application when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideDown {
+            from { 
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        
+        @keyframes scaleIn {
+            from { 
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to { 
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .fade-out {
+            animation: fadeOut 0.3s ease;
+            opacity: 0;
+        }
+        
+        .error-highlight {
+            animation: shake 0.3s ease;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Smooth transitions for form elements */
+        input, select, textarea {
+            transition: all 0.2s ease;
+        }
+        
+        /* Hover effects for better UX */
+        input:hover:not(:disabled), 
+        select:hover:not(:disabled), 
+        textarea:hover:not(:disabled) {
+            border-color: var(--primary-light);
+        }
+        
+        /* Focus effects */
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Disabled field styling */
+        input:disabled, select:disabled, textarea:disabled {
+            background: var(--light-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        /* Success state for validated fields */
+        .field-valid {
+            border-color: var(--secondary) !important;
+        }
+        
+        /* Loading spinner for async operations */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Tooltip for helper text */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 0.95;
+        }
+        
+        /* Progress bar for form completion */
+        .form-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--border);
+            z-index: 9998;
+        }
+        
+        .form-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    `;
+    document.head.appendChild(style);
     
-    inputs.forEach(input => {
-        // Add change listener for radio buttons to clear group error styling
-        if (input.type === 'radio') {
-            input.addEventListener('change', function() {
-                const radioGroup = this.closest('.radio-group');
-                if (radioGroup && radioGroup.style.border) {
-                    radioGroup.style.border = '';
-                    radioGroup.style.padding = '';
+    // Initialize the application
+    const app = new ApplicationFormController();
+    
+    // Make handleSubmit globally available for the form onsubmit attribute
+    window.handleSubmit = (event) => app.handleSubmit(event);
+    
+    // Add permanent address section visibility on load
+    const permSection = document.getElementById('permanentAddressSection');
+    if (permSection) {
+        permSection.classList.add('show');
+    }
+    
+    // Add form progress tracking
+    const form = document.getElementById('applicationForm');
+    if (form) {
+        const progressBar = document.createElement('div');
+        progressBar.className = 'form-progress';
+        progressBar.innerHTML = '<div class="form-progress-bar"></div>';
+        document.body.insertBefore(progressBar, document.body.firstChild);
+        
+        // Update progress on input change
+        const updateProgress = () => {
+            const inputs = form.querySelectorAll('input[required]:not(:disabled), select[required]:not(:disabled)');
+            const filled = Array.from(inputs).filter(input => {
+                if (input.type === 'radio' || input.type === 'checkbox') {
+                    return form.querySelector(`[name="${input.name}"]:checked`);
                 }
+                return input.value && input.value.trim() !== '';
             });
-        }
-        
-        // Add change listener for checkboxes in learning modality
-        if (input.type === 'checkbox' && input.name === 'learningModality') {
-            input.addEventListener('change', function() {
-                const modalityGrid = this.closest('.modality-grid');
-                if (modalityGrid && modalityGrid.style.border) {
-                    modalityGrid.style.border = '';
-                    modalityGrid.style.padding = '';
-                }
-            });
-        }
-        
-        input.addEventListener('blur', function() {
-            // Skip validation for disabled fields or LRN when "No" is selected
-            if (this.disabled) return;
             
-            // Special handling for LRN field
-            if (this.id === 'lrn') {
-                const withLrnNo = document.getElementById('withLrnNo').checked;
-                if (withLrnNo) {
-                    // Don't show error for LRN when "No" is selected
-                    this.style.borderColor = '';
-                    return;
-                }
-            }
-            
-            // Check if field is in returning learner section
-            const returningSection = document.getElementById('returningLearnerSection');
-            const isInReturningSection = returningSection && returningSection.contains(this);
-            
-            if (isInReturningSection) {
-                const returningYes = document.getElementById('returningYes').checked;
-                
-                if (returningYes && !this.value) {
-                    this.style.borderColor = 'var(--danger)';
-                } else {
-                    this.style.borderColor = '';
-                }
-            } else if (this.hasAttribute('required') && !this.value) {
-                this.style.borderColor = 'var(--danger)';
-            } else {
-                this.style.borderColor = '';
-            }
-        });
+            const progress = (filled.length / inputs.length) * 100;
+            progressBar.querySelector('.form-progress-bar').style.width = `${progress}%`;
+        };
         
-        // Clear error styling when user starts typing
-        input.addEventListener('input', function() {
-            if (this.style.borderColor === 'var(--danger)' || this.style.borderColor.includes('danger')) {
-                this.style.borderColor = '';
+        form.addEventListener('input', updateProgress);
+        form.addEventListener('change', updateProgress);
+        
+        // Initial progress check
+        updateProgress();
+    }
+    
+    // Add smooth scroll behavior
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
     });
+    
+    // Performance optimization: Debounce resize events
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            // Handle any resize-dependent logic here
+        }, 250);
+    });
+    
+    // Prevent form submission on Enter key (except in textareas)
+    form?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+        }
+    });
+    
+    console.log('Application Form initialized successfully');
 });
