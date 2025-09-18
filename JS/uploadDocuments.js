@@ -21,7 +21,10 @@ class DocumentUploader {
             const fileBtn = area.querySelector('.btn-file');
 
             // File button click
-            fileBtn?.addEventListener('click', () => fileInput.click());
+            fileBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
 
             // Drag and drop events
             area.addEventListener('dragover', (e) => this.handleDragOver(e));
@@ -30,7 +33,8 @@ class DocumentUploader {
 
             // Click to upload
             area.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('upload-btn')) {
+                if (!e.target.classList.contains('upload-btn') && 
+                    !e.target.closest('.upload-btn')) {
                     fileInput.click();
                 }
             });
@@ -55,14 +59,20 @@ class DocumentUploader {
         });
 
         // Modal close event
-        document.getElementById('closeViewBtn').addEventListener('click', () => this.closeViewModal());
+        const closeBtn = document.getElementById('closeViewBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeViewModal());
+        }
 
         // Close modal when clicking outside
-        document.getElementById('viewModal').addEventListener('click', (e) => {
-            if (e.target.id === 'viewModal') {
-                this.closeViewModal();
-            }
-        });
+        const modal = document.getElementById('viewModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'viewModal') {
+                    this.closeViewModal();
+                }
+            });
+        }
     }
 
     handleDragOver(e) {
@@ -72,7 +82,10 @@ class DocumentUploader {
 
     handleDragLeave(e) {
         e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
+        // Only remove if we're leaving the upload area completely
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            e.currentTarget.classList.remove('dragover');
+        }
     }
 
     handleDrop(e) {
@@ -94,7 +107,7 @@ class DocumentUploader {
     }
 
     processFile(file, target) {
-        if (!this.validateFile(file)) return;
+        if (!this.validateFile(file, target)) return;
 
         this.showLoading(target);
         
@@ -107,37 +120,76 @@ class DocumentUploader {
             this.uploadedFiles.set(target, file);
             this.showUploadedFile(file, target);
             this.hideLoading(target);
-        }, 2000);
+        }, 1500);
     }
 
-    validateFile(file) {
+    validateFile(file, target) {
         const maxSize = 5 * 1024 * 1024; // 5MB
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        
+        // Different file types allowed for different uploads
+        const allowedTypes = {
+            'birth-cert': ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
+            'report-card': ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
+            'id-photo': ['image/jpeg', 'image/jpg', 'image/png'],
+            'moral-cert': ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+        };
 
         if (file.size > maxSize) {
-            alert('File size must be less than 5MB');
+            this.showAlert('File size must be less than 5MB', 'error');
             return false;
         }
 
-        if (!allowedTypes.includes(file.type)) {
-            alert('Only PDF, JPG, and PNG files are allowed');
+        const allowed = allowedTypes[target] || allowedTypes['birth-cert'];
+        if (!allowed.includes(file.type)) {
+            if (target === 'id-photo') {
+                this.showAlert('ID Photo must be JPG or PNG format only', 'error');
+            } else {
+                this.showAlert('Only PDF, JPG, and PNG files are allowed', 'error');
+            }
             return false;
         }
 
         return true;
     }
 
+    showAlert(message, type = 'info') {
+        // Create or update alert
+        let alertEl = document.querySelector('.upload-alert');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.className = 'upload-alert alert';
+            const container = document.querySelector('.container');
+            const firstCard = container.querySelector('.form-card');
+            container.insertBefore(alertEl, firstCard);
+        }
+
+        alertEl.className = `upload-alert alert alert-${type === 'error' ? 'danger' : 'info'}`;
+        alertEl.innerHTML = `
+            <span class="alert-icon">${type === 'error' ? '⚠️' : 'ℹ️'}</span>
+            <div>${message}</div>
+        `;
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertEl && alertEl.parentNode) {
+                alertEl.remove();
+            }
+        }, 5000);
+    }
+
     showLoading(target) {
         const loadingEl = document.querySelector(`[data-loading="${target}"]`);
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
+        const uploadedFile = document.querySelector(`[data-file="${target}"]`);
         
-        uploadArea.style.display = 'none';
-        loadingEl.style.display = 'block';
+        if (uploadArea) uploadArea.style.display = 'none';
+        if (uploadedFile) uploadedFile.classList.remove('show');
+        if (loadingEl) loadingEl.style.display = 'block';
     }
 
     hideLoading(target) {
         const loadingEl = document.querySelector(`[data-loading="${target}"]`);
-        loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 
     showUploadedFile(file, target) {
@@ -145,19 +197,28 @@ class DocumentUploader {
         const fileNameEl = uploadedEl.querySelector('.file-name');
         const fileSizeEl = uploadedEl.querySelector('.file-size');
 
-        fileNameEl.textContent = `✅ ${file.name}`;
-        fileSizeEl.textContent = this.formatFileSize(file.size);
+        if (fileNameEl) fileNameEl.textContent = `✅ ${file.name}`;
+        if (fileSizeEl) fileSizeEl.textContent = this.formatFileSize(file.size);
         
         uploadedEl.classList.add('show');
+        
+        // Show success message
+        this.showAlert(`${file.name} uploaded successfully!`, 'success');
     }
 
     removeFile(e) {
+        e.stopPropagation();
         const uploadedEl = e.target.closest('[data-file]');
         const target = uploadedEl.dataset.file;
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
 
+        // Confirm removal
+        if (!confirm('Are you sure you want to remove this file?')) {
+            return;
+        }
+
         uploadedEl.classList.remove('show');
-        uploadArea.style.display = 'block';
+        if (uploadArea) uploadArea.style.display = 'block';
         
         // Clean up file URL
         if (this.fileURLs.has(target)) {
@@ -169,17 +230,20 @@ class DocumentUploader {
 
         // Clear file input
         const fileInput = document.querySelector(`[data-target="${target}"]`);
-        fileInput.value = '';
+        if (fileInput) fileInput.value = '';
+
+        this.showAlert('File removed successfully', 'info');
     }
 
     viewDocument(e) {
+        e.stopPropagation();
         const target = e.target.dataset.view;
         this.showDocumentPreview(target);
     }
 
     showDocumentPreview(target) {
         if (!this.uploadedFiles.has(target)) {
-            alert('No document found to preview.');
+            this.showAlert('No document found to preview.', 'error');
             return;
         }
 
@@ -188,6 +252,8 @@ class DocumentUploader {
         const modal = document.getElementById('viewModal');
         const title = document.getElementById('viewTitle');
         const preview = document.getElementById('documentPreview');
+
+        if (!modal || !title || !preview) return;
 
         // Set title based on document type
         const titles = {
@@ -202,61 +268,93 @@ class DocumentUploader {
         // Clear previous content
         preview.innerHTML = '<div class="preview-message">Loading document...</div>';
 
+        // Show modal first
+        modal.style.display = 'flex';
+
         // PDF PREVIEW (via PDF.js)
         if (file.type === 'application/pdf') {
-            preview.innerHTML = "";
-            const viewer = document.createElement("div");
-            viewer.style.width = "100%";
-            viewer.style.height = "80vh";
-            viewer.style.overflow = "auto";
-            preview.appendChild(viewer);
-
-            const loadingTask = pdfjsLib.getDocument(fileURL);
-            loadingTask.promise.then(pdf => {
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                    pdf.getPage(pageNum).then(page => {
-                        const viewport = page.getViewport({ scale: 1});
-                        const canvas = document.createElement("canvas");
-                        const context = canvas.getContext("2d");
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        canvas.style.display = "block";
-                        canvas.style.margin = "0 auto 10px";
-                        viewer.appendChild(canvas);
-
-                        page.render({ canvasContext: context, viewport: viewport });
-                    });
-                }
-            }).catch(err => {
-                preview.innerHTML = `<p style="color:red;">⚠️ Failed to load PDF: ${err.message}</p>`;
-            });
-
+            this.renderPDFPreview(fileURL, preview);
+        }
         // IMAGE PREVIEW
-        } else if (file.type.startsWith('image/')) {
+        else if (file.type.startsWith('image/')) {
             preview.innerHTML = `
                 <img src="${fileURL}" alt="Document preview" class="document-image">
             `;
-
+        }
         // OTHER FILE TYPES
-        } else {
+        else {
             preview.innerHTML = `
                 <div class="preview-message">
                     📄 Document: ${file.name}<br>
                     File type: ${file.type}<br>
                     Size: ${this.formatFileSize(file.size)}<br><br>
-                    <a href="${fileURL}" target="_blank" style="color: #007bff; text-decoration: underline;">
-                        Click here to download and view
+                    <a href="${fileURL}" target="_blank" class="button button-primary">
+                        Download and View
                     </a>
                 </div>
             `;
         }
+    }
 
-        modal.style.display = 'flex';
+    renderPDFPreview(fileURL, preview) {
+        // Check if PDF.js is available
+        if (typeof pdfjsLib === 'undefined') {
+            preview.innerHTML = `
+                <div class="preview-message">
+                    📄 PDF Preview not available<br><br>
+                    <a href="${fileURL}" target="_blank" class="button button-primary">
+                        Download PDF
+                    </a>
+                </div>
+            `;
+            return;
+        }
+
+        preview.innerHTML = '';
+        const viewer = document.createElement('div');
+        viewer.style.cssText = 'width: 100%; height: 100%; overflow: auto; padding: 10px;';
+        preview.appendChild(viewer);
+
+        const loadingTask = pdfjsLib.getDocument(fileURL);
+        loadingTask.promise.then(pdf => {
+            // Render all pages
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                pdf.getPage(pageNum).then(page => {
+                    const scale = 1.5;
+                    const viewport = page.getViewport({ scale: scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    canvas.style.cssText = 'display: block; margin: 0 auto 15px; max-width: 100%; height: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px;';
+                    
+                    viewer.appendChild(canvas);
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    page.render(renderContext);
+                });
+            }
+        }).catch(err => {
+            console.error('PDF rendering error:', err);
+            preview.innerHTML = `
+                <div class="preview-message" style="color: var(--danger);">
+                    ⚠️ Failed to load PDF: ${err.message}<br><br>
+                    <a href="${fileURL}" target="_blank" class="button button-primary">
+                        Download PDF
+                    </a>
+                </div>
+            `;
+        });
     }
 
     closeViewModal() {
         const modal = document.getElementById('viewModal');
-        modal.style.display = 'none';
+        if (modal) modal.style.display = 'none';
     }
 
     formatFileSize(bytes) {
@@ -266,14 +364,71 @@ class DocumentUploader {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+
+    // Get upload status for form validation
+    getUploadStatus() {
+        return {
+            birthCert: this.uploadedFiles.has('birth-cert'),
+            reportCard: this.uploadedFiles.has('report-card'),
+            idPhoto: this.uploadedFiles.has('id-photo'),
+            moralCert: this.uploadedFiles.has('moral-cert'),
+            totalUploaded: this.uploadedFiles.size
+        };
+    }
+
+    // Validate required documents before proceeding
+    validateRequiredDocuments() {
+        const status = this.getUploadStatus();
+        const required = ['birthCert', 'idPhoto']; // Birth cert and ID photo are always required
+        
+        for (let doc of required) {
+            if (!status[doc]) {
+                const docNames = {
+                    birthCert: 'Birth Certificate',
+                    idPhoto: 'ID Photo'
+                };
+                this.showAlert(`${docNames[doc]} is required before proceeding.`, 'error');
+                return false;
+            }
+        }
+        
+        return true;
+    }
 }
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new DocumentUploader();
+    const uploader = new DocumentUploader();
+    
+    // Add validation to next button
+    const nextButton = document.querySelector('.button-primary');
+    if (nextButton) {
+        nextButton.addEventListener('click', (e) => {
+            if (nextButton.getAttribute('onclick')) {
+                // Remove onclick temporarily to add validation
+                const originalOnclick = nextButton.getAttribute('onclick');
+                nextButton.removeAttribute('onclick');
+                
+                nextButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (uploader.validateRequiredDocuments()) {
+                        // Proceed to next page
+                        eval(originalOnclick);
+                    }
+                });
+            }
+        });
+    }
 });
 
 // Clean up URLs when page unloads
 window.addEventListener('beforeunload', () => {
-    // Browser usually handles this automatically
+    // Browser usually handles this automatically, but we can be explicit
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        if (input.files) {
+            Array.from(input.files).forEach(file => {
+                if (file.url) URL.revokeObjectURL(file.url);
+            });
+        }
+    });
 });

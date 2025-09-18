@@ -7,37 +7,91 @@
     <link rel="stylesheet" href="CSS/uploadDocument.css">
 </head>
 <body>
-    <div class="nav-bar">
-        <div class="logo">🏫 VPES SIMS</div>
-        <div class="nav-links">
-            <a href="#" class="nav-link">← Previous Step</a>
-            <a href="#" class="nav-link">Dashboard</a>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-container">
+            <a href="#" class="header-logo">
+                <img src="Images/logo.png" alt="VPES Logo">
+                <span class="header-logo-text">VPES SIMS</span>
+            </a>
+            
+            <div class="header-nav">
+                <a href="./admission.html" class="header-btn btn-back">← Previous Step</a>
+                <a href="./index.html" class="header-btn btn-register">🏠 Dashboard</a>
+            </div>
         </div>
     </div>
 
     <div class="container">
-        <h2>📄 Upload Required Documents</h2>
-        
-        <div class="status-bar">
-            <span class="status-badge status-approved">1. Personal Info ✅</span>
-            <span class="status-badge status-approved">2. Documents ✅</span>
-            <span class="status-badge status-pending">3. Review</span>
+        <!-- Header Section -->
+        <div class="header-section">
+            <h1 class="page-title">Document Upload</h1>
+            <p class="page-subtitle">Upload required documents to complete your application</p>
         </div>
 
-        <div class="requirements-card">
-            <h3>📋 Document Requirements</h3>
-            <p>Please upload clear, readable copies of the following documents:</p>
-            <ul>
-                <li>Birth Certificate (PSA Copy)</li>
-                <li>Report Card / Form 138 (for transferees)</li>
-                <li>2x2 ID Photo (recent)</li>
-                <li>Certificate of Good Moral Character (for transferees)</li>
-            </ul>
+        <!-- Progress Indicator -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-step">
+                    <div class="step-indicator completed">✓</div>
+                    <div class="step-label">Personal Info</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator active">2</div>
+                    <div class="step-label">Documents</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator pending">3</div>
+                    <div class="step-label">Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert alert-info">
+            <span class="alert-icon">📋</span>
+            <div>
+                <strong>Document Requirements:</strong> Please upload clear, readable copies of all required documents. 
+                Supported formats: PDF, JPG, PNG (Max: 5MB per file).
+            </div>
+        </div>
+
+        <!-- Requirements Card -->
+        <div class="form-card requirements-card">
+            <div class="form-title">
+                <span>📋</span>
+                Required Documents
+            </div>
+            <div class="requirements-list">
+                <div class="requirement-item">
+                    <span class="req-icon">📄</span>
+                    <span class="req-text">Birth Certificate (PSA Copy)</span>
+                    <span class="req-status">Required</span>
+                </div>
+                <div class="requirement-item">
+                    <span class="req-icon">📊</span>
+                    <span class="req-text">Report Card / Form 138 (for transferees)</span>
+                    <span class="req-status">If applicable</span>
+                </div>
+                <div class="requirement-item">
+                    <span class="req-icon">📸</span>
+                    <span class="req-text">2x2 ID Photo (recent)</span>
+                    <span class="req-status">Required</span>
+                </div>
+                <div class="requirement-item">
+                    <span class="req-icon">🏆</span>
+                    <span class="req-text">Certificate of Good Moral Character (for transferees)</span>
+                    <span class="req-status">If applicable</span>
+                </div>
+            </div>
         </div>
 
         <!-- Birth Certificate Upload -->
-        <div class="upload-section">
-            <div class="upload-title">📄 Birth Certificate</div>
+        <div class="form-card upload-section">
+            <div class="form-title">
+                <span>📄</span>
+                Birth Certificate
+            </div>
             <div class="upload-area" data-upload="birth-cert">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Drag and drop your file here</div>
@@ -68,8 +122,11 @@
         </div>
 
         <!-- Report Card Upload -->
-        <div class="upload-section">
-            <div class="upload-title">📊 Report Card / Form 138</div>
+        <div class="form-card upload-section">
+            <div class="form-title">
+                <span>📊</span>
+                Report Card / Form 138
+            </div>
             <div class="upload-area" data-upload="report-card">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Drag and drop your file here</div>
@@ -100,8 +157,11 @@
         </div>
 
         <!-- ID Photo Upload -->
-        <div class="upload-section">
-            <div class="upload-title">📸 ID Photo (2x2)</div>
+        <div class="form-card upload-section">
+            <div class="form-title">
+                <span>📸</span>
+                ID Photo (2x2)
+            </div>
             <div class="upload-area" data-upload="id-photo">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Drag and drop your file here</div>
@@ -132,8 +192,11 @@
         </div>
 
         <!-- Good Moral Certificate Upload -->
-        <div class="upload-section">
-            <div class="upload-title">🏆 Certificate of Good Moral Character</div>
+        <div class="form-card upload-section">
+            <div class="form-title">
+                <span>🏆</span>
+                Certificate of Good Moral Character
+            </div>
             <div class="upload-area" data-upload="moral-cert">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Drag and drop your file here</div>
@@ -163,9 +226,14 @@
             </div>
         </div>
 
-        <div class="action-buttons">
-            <button class="btn btn-secondary">⬅️ Previous Step</button>
-            <button class="btn btn-primary">➡️ Review Application</button>
+        <!-- Form Actions -->
+        <div class="button-group">
+            <button class="button button-secondary" onclick="window.location.href='admission.html';">
+                <span>⬅️</span> Previous Step
+            </button>
+            <button class="button button-primary" onclick="window.location.href='review.html';">
+                Review Application <span>➡️</span>
+            </button>
         </div>
     </div>
 
@@ -183,9 +251,7 @@
     </div>
 
     <!-- Add PDF.js library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="JS/uploadDocuments.js"></script>
-
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="JS/uploadDocuments.js"></script>
 </body>
 </html>

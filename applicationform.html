@@ -6,276 +6,77 @@
     <title>VPES SIMS - Admission Application Form</title>
     <link rel="stylesheet" href="CSS/applicationForm.css">
 </head>
+
 <body>
-    <div class="nav-bar">
-        <div class="logo">🏫 VPES SIMS</div>
-        <div class="nav-links">
-            <a href="index.html" class="nav-link">← Back to Dashboard</a>
-            <a href="#" class="nav-link" onclick="saveDraft()">💾 Save Draft</a>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-container">
+            <a href="#" class="header-logo">
+                <img src="Images/logo.png" alt="VPES Logo">
+                <span class="header-logo-text">VPES SIMS</span>
+            </a>
+            
+            <div class="header-nav">
+                <a href="./index.html" class="header-btn btn-back">← Back to Home</a>
+            </div>
         </div>
     </div>
 
+    <!-- Main Container -->
     <div class="container">
-        <h2>📝 Admission Application Form</h2>
-        
-        <div class="progress-indicator">
-            <span class="status-badge status-pending">1. Personal Info ⏳</span>
-            <span class="status-badge status-inactive">2. Documents</span>
-            <span class="status-badge status-inactive">3. Review</span>
+        <!-- Header -->
+        <div class="header-section">
+            <h1 class="page-title">Admission Application</h1>
+            <p class="page-subtitle">Complete the form below to apply for admission</p>
         </div>
 
+        <!-- Progress Indicator -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-step">
+                    <div class="step-indicator active">1</div>
+                    <div class="step-label">Personal Info</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator pending">2</div>
+                    <div class="step-label">Documents</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-indicator pending">3</div>
+                    <div class="step-label">Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert -->
         <div class="alert alert-info">
-            <strong>📋 Instructions:</strong> Please fill out all required fields marked with <span class="required">*</span>. Location fields will auto-populate with Philippine locations for easier selection.
+            <span class="alert-icon">ℹ️</span>
+            <div>
+                <strong>Important:</strong> Please fill out all required fields marked with <span class="required">*</span>. 
+                Make sure all information is accurate and complete before proceeding.
+            </div>
         </div>
 
+        <!-- Form -->
         <form id="applicationForm" onsubmit="handleSubmit(event)">
-            <!-- Student Information -->
-            <div class="form-card">
-                <div class="form-title">👤 Student Information</div>
-                
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="lrn">Learner Reference Number (LRN)</label>
-                        <input type="text" id="lrn" name="lrn" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="psaBirth">PSA Birth Certificate No.</label>
-                        <input type="text" id="psaBirth" name="psaBirth" style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-3">
-                    <div class="form-field">
-                        <label for="lastName">Last Name <span class="required">*</span></label>
-                        <input type="text" id="lastName" name="lastName" required style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="firstName">First Name <span class="required">*</span></label>
-                        <input type="text" id="firstName" name="firstName" required style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="middleName">Middle Name</label>
-                        <input type="text" id="middleName" name="middleName" style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-3">
-                    <div class="form-field">
-                        <label for="extensionName">Extension Name (Jr., III, etc.)</label>
-                        <input type="text" id="extensionName" name="extensionName" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="birthDate">Birthdate <span class="required">*</span></label>
-                        <input type="date" id="birthDate" name="birthDate" required>
-                    </div>
-                    <div class="form-field">
-                        <label for="age">Age <span class="required">*</span></label>
-                        <input type="number" id="age" name="age" min="3" max="25" required>
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label>Sex <span class="required">*</span></label>
-                        <div class="checkbox-group">
-                            <div class="checkbox-item">
-                                <input type="radio" id="male" name="sex" value="MALE" required>
-                                <label for="male">Male</label>
-                            </div>
-                            <div class="checkbox-item">
-                                <input type="radio" id="female" name="sex" value="FEMALE" required>
-                                <label for="female">Female</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="motherTongue">Mother Tongue <span class="required">*</span></label>
-                        <input type="text" id="motherTongue" name="motherTongue" required style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="birthProvince">Birth Province <span class="required">*</span></label>
-                        <select id="birthProvince" name="birthProvince" required onchange="updateBirthCities()">
-                            <option value="">Select Province</option>
-                        </select>
-                    </div>
-                    <div class="form-field">
-                        <label for="birthCity">Birth City/Municipality <span class="required">*</span></label>
-                        <select id="birthCity" name="birthCity" required disabled>
-                            <option value="">Select City/Municipality</option>
-                        </select>
-                        <p class="location-note">Please select province first</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Address Information -->
-            <div class="form-card">
-                <div class="form-title">🏠 Current Address Information</div>
-                
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="currentProvince">Province <span class="required">*</span></label>
-                        <select id="currentProvince" name="currentProvince" required onchange="updateCurrentCities()">
-                            <option value="">Select Province</option>
-                        </select>
-                    </div>
-                    <div class="form-field">
-                        <label for="currentMunicipality">City/Municipality <span class="required">*</span></label>
-                        <select id="currentMunicipality" name="currentMunicipality" required disabled onchange="updateCurrentBarangays()">
-                            <option value="">Select City/Municipality</option>
-                        </select>
-                        <p class="location-note">Please select province first</p>
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="currentBarangay">Barangay <span class="required">*</span></label>
-                        <select id="currentBarangay" name="currentBarangay" required disabled>
-                            <option value="">Select Barangay</option>
-                        </select>
-                        <p class="location-note">Please select city/municipality first</p>
-                    </div>
-                    <div class="form-field">
-                        <label for="currentHouseNo">House No./Street Name <span class="required">*</span></label>
-                        <input type="text" id="currentHouseNo" name="currentHouseNo" required style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-field">
-                    <label for="currentZipCode">Zip Code</label>
-                    <input type="text" id="currentZipCode" name="currentZipCode" style="text-transform: uppercase;">
-                </div>
-
-                <div class="form-field">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="sameAddress" name="sameAddress" onchange="togglePermanentAddress()">
-                        <label for="sameAddress">Permanent address is the same as current address</label>
-                    </div>
-                </div>
-
-                <div id="permanentAddressSection">
-                    <h4 style="margin-top: 20px; color: #667eea;">Permanent Address</h4>
-                    
-                    <div class="form-grid form-grid-2">
-                        <div class="form-field">
-                            <label for="permProvince">Province</label>
-                            <select id="permProvince" name="permProvince" onchange="updatePermCities()">
-                                <option value="">Select Province</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="permMunicipality">City/Municipality</label>
-                            <select id="permMunicipality" name="permMunicipality" disabled onchange="updatePermBarangays()">
-                                <option value="">Select City/Municipality</option>
-                            </select>
-                            <p class="location-note">Please select province first</p>
-                        </div>
-                    </div>
-
-                    <div class="form-grid form-grid-2">
-                        <div class="form-field">
-                            <label for="permBarangay">Barangay</label>
-                            <select id="permBarangay" name="permBarangay" disabled>
-                                <option value="">Select Barangay</option>
-                            </select>
-                            <p class="location-note">Please select city/municipality first</p>
-                        </div>
-                        <div class="form-field">
-                            <label for="permHouseNo">House No./Street Name</label>
-                            <input type="text" id="permHouseNo" name="permHouseNo" style="text-transform: uppercase;">
-                        </div>
-                    </div>
-
-                    <div class="form-field">
-                        <label for="permZipCode">Zip Code</label>
-                        <input type="text" id="permZipCode" name="permZipCode" style="text-transform: uppercase;">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Parent/Guardian Information -->
-            <div class="form-card">
-                <div class="form-title">👨‍👩‍👧‍👦 Parent/Guardian Information</div>
-                
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="fatherLastName">Father's Last Name</label>
-                        <input type="text" id="fatherLastName" name="fatherLastName" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="fatherFirstName">Father's First Name</label>
-                        <input type="text" id="fatherFirstName" name="fatherFirstName" style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-3">
-                    <div class="form-field">
-                        <label for="fatherMiddleName">Father's Middle Name</label>
-                        <input type="text" id="fatherMiddleName" name="fatherMiddleName" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="fatherContact">Father's Contact Number</label>
-                        <input type="tel" id="fatherContact" name="fatherContact">
-                    </div>
-                    <div class="form-field">
-                        <label for="fatherEmail">Father's Email (optional)</label>
-                        <input type="email" id="fatherEmail" name="fatherEmail">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="motherMaidenLast">Mother's Maiden Last Name</label>
-                        <input type="text" id="motherMaidenLast" name="motherMaidenLast" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="motherFirstName">Mother's First Name</label>
-                        <input type="text" id="motherFirstName" name="motherFirstName" style="text-transform: uppercase;">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-3">
-                    <div class="form-field">
-                        <label for="motherMiddleName">Mother's Middle Name</label>
-                        <input type="text" id="motherMiddleName" name="motherMiddleName" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="motherContact">Mother's Contact Number</label>
-                        <input type="tel" id="motherContact" name="motherContact">
-                    </div>
-                    <div class="form-field">
-                        <label for="motherEmail">Mother's Email (optional)</label>
-                        <input type="email" id="motherEmail" name="motherEmail">
-                    </div>
-                </div>
-
-                <div class="form-grid form-grid-2">
-                    <div class="form-field">
-                        <label for="guardianName">Legal Guardian's Name (if applicable)</label>
-                        <input type="text" id="guardianName" name="guardianName" style="text-transform: uppercase;">
-                    </div>
-                    <div class="form-field">
-                        <label for="guardianContact">Guardian's Contact Number</label>
-                        <input type="tel" id="guardianContact" name="guardianContact">
-                    </div>
-                </div>
-            </div>
-
             <!-- School Information -->
             <div class="form-card">
-                <div class="form-title">🏫 School Information</div>
+                <div class="form-title">
+                    <span>🏫</span>
+                    School Information
+                </div>
                 
                 <div class="form-grid form-grid-2">
                     <div class="form-field">
-                        <label for="schoolYear">School Year <span class="required">*</span></label>
-                        <input type="text" id="schoolYear" name="schoolYear" value="2024-2025" required style="text-transform: uppercase;">
+                        <label for="schoolYear">
+                            School Year <span class="required">*</span>
+                        </label>
+                        <input type="text" id="schoolYear" name="schoolYear" value="2024-2025" required>
                     </div>
                     <div class="form-field">
-                        <label for="gradeLevel">Grade Level to Enroll <span class="required">*</span></label>
+                        <label for="gradeLevel">
+                            Grade Level to Enroll <span class="required">*</span>
+                        </label>
                         <select id="gradeLevel" name="gradeLevel" required>
                             <option value="">Select Grade Level</option>
                             <option value="KINDERGARTEN">Kindergarten</option>
@@ -289,144 +90,420 @@
                     </div>
                 </div>
 
-                <div class="form-field">
-                    <label>Returning Learner (Balik-Aral)?</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="returningYes" name="returning" value="YES" onchange="toggleReturningFields()">
-                            <label for="returningYes">Yes</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="returningNo" name="returning" value="NO" onchange="toggleReturningFields()">
-                            <label for="returningNo">No</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="returningLearnerFields" style="display: none;">
-                    <h4 style="margin-top: 20px; color: #667eea;">Previous School Information</h4>
-                    
-                    <div class="form-grid form-grid-2">
-                        <div class="form-field">
-                            <label for="lastGradeCompleted">Last Grade Level Completed</label>
-                            <input type="text" id="lastGradeCompleted" name="lastGradeCompleted" style="text-transform: uppercase;">
-                        </div>
-                        <div class="form-field">
-                            <label for="lastSchoolYear">Last School Year Completed</label>
-                            <input type="text" id="lastSchoolYear" name="lastSchoolYear" style="text-transform: uppercase;">
-                        </div>
-                    </div>
-
+                <div class="form-grid form-grid-2">
                     <div class="form-field">
-                        <label for="lastSchoolAttended">Last School Attended</label>
-                        <input type="text" id="lastSchoolAttended" name="lastSchoolAttended" style="text-transform: uppercase;">
+                        <label>With LRN? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="withLrnYes" name="withLrn" value="YES" required>
+                                <label for="withLrnYes">Yes</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="withLrnNo" name="withLrn" value="NO" required>
+                                <label for="withLrnNo">No</label>
+                            </div>
+                        </div>
                     </div>
-
                     <div class="form-field">
-                        <label for="lastSchoolId">School ID</label>
-                        <input type="text" id="lastSchoolId" name="lastSchoolId" style="text-transform: uppercase;">
+                        <label>Returning Learner (Balik-Aral)? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="returningYes" name="returning" value="YES" required>
+                                <label for="returningYes">Yes</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="returningNo" name="returning" value="NO" required>
+                                <label for="returningNo">No</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Additional Information -->
+            <!-- Student Information -->
             <div class="form-card">
-                <div class="form-title">ℹ️ Additional Information</div>
+                <div class="form-title">
+                    <span>👤</span>
+                    Student Information
+                </div>
                 
-                <div class="form-field">
-                    <label>Is the child a Learner with Disability?</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="disabilityYes" name="hasDisability" value="YES" onchange="toggleDisabilityFields()">
-                            <label for="disabilityYes">Yes</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="disabilityNo" name="hasDisability" value="NO" onchange="toggleDisabilityFields()">
-                            <label for="disabilityNo">No</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="disabilityTypes" style="display: none;">
-                    <label style="margin-top: 15px;">Type of Disability (check all that apply):</label>
-                    <div class="checkbox-group" style="margin-top: 10px;">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="visualImpairment" name="disabilityType" value="VISUAL_IMPAIRMENT">
-                            <label for="visualImpairment">Visual Impairment</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="hearingImpairment" name="disabilityType" value="HEARING_IMPAIRMENT">
-                            <label for="hearingImpairment">Hearing Impairment</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="learningDisability" name="disabilityType" value="LEARNING_DISABILITY">
-                            <label for="learningDisability">Learning Disability</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="intellectualDisability" name="disabilityType" value="INTELLECTUAL_DISABILITY">
-                            <label for="intellectualDisability">Intellectual Disability</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="autismSpectrum" name="disabilityType" value="AUTISM_SPECTRUM">
-                            <label for="autismSpectrum">Autism Spectrum Disorder</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="speechLanguage" name="disabilityType" value="SPEECH_LANGUAGE">
-                            <label for="speechLanguage">Speech/Language Disorder</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-field">
-                    <label>Belonging to any Indigenous Peoples (IP) Community?</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="ipYes" name="indigenousPeople" value="YES" onchange="toggleIPField()">
-                            <label for="ipYes">Yes</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="ipNo" name="indigenousPeople" value="NO" onchange="toggleIPField()">
-                            <label for="ipNo">No</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="ipSpecifyField" style="display: none;">
+                <div class="form-grid form-grid-2">
                     <div class="form-field">
-                        <label for="ipSpecify">Please specify:</label>
-                        <input type="text" id="ipSpecify" name="ipSpecify" style="text-transform: uppercase;">
+                        <label for="lrn">
+                            Learner Reference Number (LRN) <span class="required">*</span>
+                        </label>
+                        <input type="text" id="lrn" name="lrn" required maxlength="12" placeholder="000000000000">
+                        <span class="helper-text">12-digit LRN from DepEd</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="psaBirth">
+                            PSA Birth Certificate No.
+                        </label>
+                        <input type="text" id="psaBirth" name="psaBirth" maxlength="20">
+                        <span class="helper-text">If available upon registration</span>
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-4">
+                    <div class="form-field">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="lastName" name="lastName" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="middleName">Middle Name</label>
+                        <input type="text" id="middleName" name="middleName">
+                    </div>
+                    <div class="form-field">
+                        <label for="extensionName">Extension</label>
+                        <input type="text" id="extensionName" name="extensionName" placeholder="Jr., III">
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-3">
+                    <div class="form-field">
+                        <label for="birthDate">Birthdate <span class="required">*</span></label>
+                        <input type="date" id="birthDate" name="birthDate" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="age">Age <span class="required">*</span></label>
+                        <input type="number" id="age" name="age" min="3" max="25" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Sex <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="male" name="sex" value="MALE" required>
+                                <label for="male">Male</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="female" name="sex" value="FEMALE" required>
+                                <label for="female">Female</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-3">
+                    <div class="form-field">
+                        <label for="birthProvince">Birth Province <span class="required">*</span></label>
+                        <select id="birthProvince" name="birthProvince" required>
+                            <option value="">Select Province</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="birthCity">Birth City/Municipality <span class="required">*</span></label>
+                        <select id="birthCity" name="birthCity" required disabled>
+                            <option value="">Select City/Municipality</option>
+                        </select>
+                        <span class="helper-text">Select province first</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="motherTongue">Mother Tongue <span class="required">*</span></label>
+                        <input type="text" id="motherTongue" name="motherTongue" required>
+                    </div>
+                </div>
+
+                <!-- Additional Information Section -->
+                <div class="section-subtitle">
+                    <span>📋</span>
+                    Additional Information
+                </div>
+
+                <div class="form-grid form-grid-3">
+                    <div class="form-field">
+                        <label>Is the child a Learner with Disability?</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="disabilityYes" name="hasDisability" value="YES">
+                                <label for="disabilityYes">Yes</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="disabilityNo" name="hasDisability" value="NO">
+                                <label for="disabilityNo">No</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label>Belonging to any Indigenous Peoples (IP) Community?</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="ipYes" name="indigenousPeople" value="YES">
+                                <label for="ipYes">Yes</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="ipNo" name="indigenousPeople" value="NO">
+                                <label for="ipNo">No</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label>Is your family a beneficiary of 4Ps?</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="fourPsYes" name="fourPs" value="YES">
+                                <label for="fourPsYes">Yes</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="fourPsNo" name="fourPs" value="NO">
+                                <label for="fourPsNo">No</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address Information -->
+            <div class="form-card">
+                <div class="form-title">
+                    <span>🏠</span>
+                    Address Information
+                </div>
+
+                <div class="section-subtitle">
+                    <span>📍</span>
+                    Current Address
+                </div>
+                
+                <div class="form-grid form-grid-4">
+                    <div class="form-field">
+                        <label for="currentProvince">Province <span class="required">*</span></label>
+                        <select id="currentProvince" name="currentProvince" required>
+                            <option value="">Select Province</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="currentMunicipality">City/Municipality <span class="required">*</span></label>
+                        <select id="currentMunicipality" name="currentMunicipality" required disabled>
+                            <option value="">Select City/Municipality</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="currentBarangay">Barangay <span class="required">*</span></label>
+                        <select id="currentBarangay" name="currentBarangay" required disabled>
+                            <option value="">Select Barangay</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="currentZipCode">Zip Code</label>
+                        <input type="text" id="currentZipCode" name="currentZipCode" maxlength="4" placeholder="0000">
                     </div>
                 </div>
 
                 <div class="form-field">
-                    <label>Is your family a beneficiary of 4Ps?</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="fourPsYes" name="fourPs" value="YES" onchange="toggleFourPsField()">
-                            <label for="fourPsYes">Yes</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="fourPsNo" name="fourPs" value="NO" onchange="toggleFourPsField()">
-                            <label for="fourPsNo">No</label>
-                        </div>
+                    <label for="currentHouseNo">House No./Street Name <span class="required">*</span></label>
+                    <input type="text" id="currentHouseNo" name="currentHouseNo" required>
+                </div>
+
+                <div class="form-field" style="margin-top: 20px;">
+                    <div class="checkbox-item" style="width: fit-content;">
+                        <input type="checkbox" id="sameAddress" name="sameAddress" onchange="togglePermanentAddress()">
+                        <label for="sameAddress">Permanent address is the same as current address</label>
                     </div>
                 </div>
 
-                <div id="fourPsIdField" style="display: none;">
+                <!-- Permanent Address Section -->
+                <div id="permanentAddressSection" class="conditional-section">
+                    <div class="section-subtitle">
+                        <span>🏡</span>
+                        Permanent Address
+                    </div>
+                    
+                    <div class="form-grid form-grid-4">
+                        <div class="form-field">
+                            <label for="permProvince">Province <span class="required">*</span></label>
+                            <select id="permProvince" name="permProvince">
+                                <option value="">Select Province</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="permMunicipality">City/Municipality <span class="required">*</span></label>
+                            <select id="permMunicipality" name="permMunicipality" disabled>
+                                <option value="">Select City/Municipality</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="permBarangay">Barangay <span class="required">*</span></label>
+                            <select id="permBarangay" name="permBarangay" disabled>
+                                <option value="">Select Barangay</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="permZipCode">Zip Code</label>
+                            <input type="text" id="permZipCode" name="permZipCode" maxlength="4" placeholder="0000">
+                        </div>
+                    </div>
+
                     <div class="form-field">
-                        <label for="fourPsId">4Ps Household ID Number:</label>
-                        <input type="text" id="fourPsId" name="fourPsId" style="text-transform: uppercase;">
+                        <label for="permHouseNo">House No./Street Name <span class="required">*</span></label>
+                        <input type="text" id="permHouseNo" name="permHouseNo">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parent/Guardian Information -->
+            <div class="form-card">
+                <div class="form-title">
+                    <span>👨‍👩‍👧‍👦</span>
+                    Parent/Guardian Information
+                </div>
+
+                <div class="section-subtitle">
+                    <span>👨</span>
+                    Father's Information
+                </div>
+
+                <div class="form-grid form-grid-3">
+                    <div class="form-field">
+                        <label for="fatherLastName">Last Name</label>
+                        <input type="text" id="fatherLastName" name="fatherLastName">
+                    </div>
+                    <div class="form-field">
+                        <label for="fatherFirstName">First Name</label>
+                        <input type="text" id="fatherFirstName" name="fatherFirstName">
+                    </div>
+                    <div class="form-field">
+                        <label for="fatherMiddleName">Middle Name</label>
+                        <input type="text" id="fatherMiddleName" name="fatherMiddleName">
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-field">
+                        <label for="fatherContact">Contact Number</label>
+                        <input type="tel" id="fatherContact" name="fatherContact" placeholder="09XXXXXXXXX">
+                    </div>
+                    <div class="form-field">
+                        <label for="fatherEmail">Email Address</label>
+                        <input type="email" id="fatherEmail" name="fatherEmail" placeholder="email@example.com">
+                    </div>
+                </div>
+
+                <div class="section-subtitle">
+                    <span>👩</span>
+                    Mother's Information
+                </div>
+
+                <div class="form-grid form-grid-3">
+                    <div class="form-field">
+                        <label for="motherMaidenLast">Maiden Last Name</label>
+                        <input type="text" id="motherMaidenLast" name="motherMaidenLast">
+                    </div>
+                    <div class="form-field">
+                        <label for="motherFirstName">First Name</label>
+                        <input type="text" id="motherFirstName" name="motherFirstName">
+                    </div>
+                    <div class="form-field">
+                        <label for="motherMiddleName">Middle Name</label>
+                        <input type="text" id="motherMiddleName" name="motherMiddleName">
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-field">
+                        <label for="motherContact">Contact Number</label>
+                        <input type="tel" id="motherContact" name="motherContact" placeholder="09XXXXXXXXX">
+                    </div>
+                    <div class="form-field">
+                        <label for="motherEmail">Email Address</label>
+                        <input type="email" id="motherEmail" name="motherEmail" placeholder="email@example.com">
+                    </div>
+                </div>
+
+                <div class="section-subtitle">
+                    <span>👤</span>
+                    Legal Guardian (if applicable)
+                </div>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-field">
+                        <label for="guardianName">Guardian's Full Name</label>
+                        <input type="text" id="guardianName" name="guardianName">
+                    </div>
+                    <div class="form-field">
+                        <label for="guardianContact">Contact Number</label>
+                        <input type="tel" id="guardianContact" name="guardianContact" placeholder="09XXXXXXXXX">
+                    </div>
+                </div>
+            </div>
+
+            <!-- For Returning Learner and Transfer Students -->
+            <div class="form-card" id="returningLearnerSection">
+                <div class="form-title">
+                    <span>🔄</span>
+                    For Returning Learner (Balik-Aral) and Those Who will Transfer/Move In
+                </div>
+                
+                <p style="margin-bottom: 16px; color: var(--gray); font-style: italic;">
+                    Complete this section only if you selected "Yes" for Returning Learner or if transferring from another school.
+                </p>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-field">
+                        <label for="lastGradeLevel">
+                            Last Grade Level Completed
+                            <span class="required conditional-required">*</span>
+                        </label>
+                        <select id="lastGradeLevel" name="lastGradeLevel">
+                            <option value="">Select Grade Level</option>
+                            <option value="KINDERGARTEN">Kindergarten</option>
+                            <option value="GRADE 1">Grade 1</option>
+                            <option value="GRADE 2">Grade 2</option>
+                            <option value="GRADE 3">Grade 3</option>
+                            <option value="GRADE 4">Grade 4</option>
+                            <option value="GRADE 5">Grade 5</option>
+                            <option value="GRADE 6">Grade 6</option>
+                            <option value="GRADE 7">Grade 7</option>
+                            <option value="GRADE 8">Grade 8</option>
+                            <option value="GRADE 9">Grade 9</option>
+                            <option value="GRADE 10">Grade 10</option>
+                            <option value="GRADE 11">Grade 11</option>
+                            <option value="GRADE 12">Grade 12</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="lastSchoolYear">
+                            Last School Year Completed
+                            <span class="required conditional-required">*</span>
+                        </label>
+                        <input type="text" id="lastSchoolYear" name="lastSchoolYear" placeholder="e.g., 2023-2024">
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-field">
+                        <label for="lastSchoolAttended">
+                            Last School Attended
+                            <span class="required conditional-required">*</span>
+                        </label>
+                        <input type="text" id="lastSchoolAttended" name="lastSchoolAttended" placeholder="Name of Previous School">
+                    </div>
+                    <div class="form-field">
+                        <label for="schoolId">
+                            School ID
+                            <span class="required conditional-required">*</span>
+                        </label>
+                        <input type="text" id="schoolId" name="schoolId" placeholder="DepEd School ID">
+                        <span class="helper-text">Enter the 6-digit DepEd School ID if known</span>
                     </div>
                 </div>
             </div>
 
             <!-- Learning Modality -->
             <div class="form-card">
-                <div class="form-title">📚 Learning Modality Preference</div>
+                <div class="form-title">
+                    <span>📚</span>
+                    Learning Modality Preference
+                </div>
                 
-                <p style="margin-bottom: 15px; color: #6b7280;">Choose all learning modalities that apply for your child:</p>
+                <p style="margin-bottom: 16px; color: var(--gray);">
+                    If the school implements other distance learning modalities aside from face-to-face instruction, which would you prefer for your child? (Select as many as apply):
+                </p>
                 
-                <div class="checkbox-group">
+                <div class="modality-grid">
                     <div class="checkbox-item">
                         <input type="checkbox" id="faceToFace" name="learningModality" value="FACE_TO_FACE">
                         <label for="faceToFace">Face-to-Face</label>
@@ -445,11 +522,11 @@
                     </div>
                     <div class="checkbox-item">
                         <input type="checkbox" id="radioBased" name="learningModality" value="RADIO_BASED">
-                        <label for="radioBased">Radio-Based Instruction</label>
+                        <label for="radioBased">Radio-Based</label>
                     </div>
                     <div class="checkbox-item">
                         <input type="checkbox" id="educationalTv" name="learningModality" value="EDUCATIONAL_TV">
-                        <label for="educationalTv">Educational Television</label>
+                        <label for="educationalTv">Educational TV</label>
                     </div>
                     <div class="checkbox-item">
                         <input type="checkbox" id="blended" name="learningModality" value="BLENDED">
@@ -462,17 +539,14 @@
                 </div>
             </div>
 
+            <!-- Form Actions -->
             <div class="button-group">
-                <button type="button" class="button button-secondary" onclick="saveDraft()">
-                    💾 Save as Draft
-                </button>
                 <button type="button" class="button button-primary" onclick="window.location.href='uploadDocument.html';">
-    ➡️ Next Step - Document Upload
-</button>
-
+                    Next Step <span>→</span>
+                </button>
             </div>
         </form>
     </div>
+
+    <script src="JS/applicationform.js"></script>
 </body>
-<script src="JS/applicationform.js"></script>
-</html>
