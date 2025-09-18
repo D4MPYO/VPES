@@ -7,11 +7,12 @@ class ApplicationReview {
         this.applicationData = {};
         this.documentStatus = {};
         this.isValid = false;
+        this.locationCache = new Map(); // Cache for decoded locations
         this.init();
     }
 
-    init() {
-        this.loadAllData();
+    async init() {
+        await this.loadAllData();
         this.setupEventListeners();
         this.checkApplicationStatus();
     }
@@ -34,12 +35,12 @@ class ApplicationReview {
         // Edit buttons are handled inline with onclick
     }
 
-    loadAllData() {
+    async loadAllData() {
         // Load application form data
         const formData = sessionStorage.getItem('applicationFormData');
         if (formData) {
             this.applicationData = JSON.parse(formData);
-            this.populateReviewData();
+            await this.populateReviewData();
         } else {
             this.showNoDataMessage();
         }
@@ -52,7 +53,7 @@ class ApplicationReview {
         }
     }
 
-    populateReviewData() {
+    async populateReviewData() {
         const data = this.applicationData;
 
         // School Information
@@ -69,12 +70,17 @@ class ApplicationReview {
         this.setFieldValue('reviewBirthdate', this.formatDate(data.birthDate));
         this.setFieldValue('reviewAge', data.age ? `${data.age} years old` : '-');
         this.setFieldValue('reviewSex', data.sex || '-');
-        this.setFieldValue('reviewBirthPlace', this.formatBirthPlace(data));
+        
+        // Birth Place - decode async
+        const birthPlace = await this.formatBirthPlace(data);
+        this.setFieldValue('reviewBirthPlace', birthPlace);
         this.setFieldValue('reviewMotherTongue', data.motherTongue || '-');
 
-        // Address Information
-        this.setFieldValue('reviewCurrentAddress', this.formatAddress('current', data));
-        this.setFieldValue('reviewPermanentAddress', this.formatAddress('permanent', data));
+        // Address Information - decode async
+        const currentAddress = await this.formatAddress('current', data);
+        const permanentAddress = await this.formatAddress('permanent', data);
+        this.setFieldValue('reviewCurrentAddress', currentAddress);
+        this.setFieldValue('reviewPermanentAddress', permanentAddress);
 
         // Parent/Guardian Information
         this.populateParentInfo(data);
@@ -126,29 +132,132 @@ class ApplicationReview {
         }
     }
 
-    formatBirthPlace(data) {
+    async formatBirthPlace(data) {
         const parts = [];
-        if (data.birthCity) parts.push(this.decodeLocation(data.birthCity));
-        if (data.birthProvince) parts.push(this.decodeLocation(data.birthProvince));
+        if (data.birthCity) {
+            const cityName = await this.decodeLocation(data.birthCity, 'city', data.birthProvince);
+            if (cityName) parts.push(cityName);
+        }
+        if (data.birthProvince) {
+            const provinceName = await this.decodeLocation(data.birthProvince, 'province');
+            if (provinceName) parts.push(provinceName);
+        }
         return parts.join(', ') || '-';
     }
 
-    formatAddress(type, data) {
+    async formatAddress(type, data) {
         const prefix = type === 'current' ? 'current' : 'perm';
         const parts = [];
         
-        if (data[`${prefix}HouseNo`]) parts.push(data[`${prefix}HouseNo`]);
-        if (data[`${prefix}Barangay`]) parts.push(`Barangay ${this.decodeLocation(data[`${prefix}Barangay`])}`);
-        if (data[`${prefix}Municipality`]) parts.push(this.decodeLocation(data[`${prefix}Municipality`]));
-        if (data[`${prefix}Province`]) parts.push(this.decodeLocation(data[`${prefix}Province`]));
-        if (data[`${prefix}ZipCode`]) parts.push(data[`${prefix}ZipCode`]);
+        if (data[`${prefix}HouseNo`]) {
+            parts.push(data[`${prefix}HouseNo`]);
+        }
+        
+        if (data[`${prefix}Barangay`]) {
+            const barangayName = await this.decodeLocation(
+                data[`${prefix}Barangay`], 
+                'barangay', 
+                data[`${prefix}Municipality`]
+            );
+            if (barangayName) {
+                // Remove redundant "Barangay" prefix - just use the name as returned by API
+                // The API already includes "BARANGAY" in names like "BARANGAY I (POB.)"
+                parts.push(barangayName);
+            }
+        }
+        
+        if (data[`${prefix}Municipality`]) {
+            const municipalityName = await this.decodeLocation(
+                data[`${prefix}Municipality`], 
+                'city', 
+                data[`${prefix}Province`]
+            );
+            if (municipalityName) parts.push(municipalityName);
+        }
+        
+        if (data[`${prefix}Province`]) {
+            const provinceName = await this.decodeLocation(data[`${prefix}Province`], 'province');
+            if (provinceName) parts.push(provinceName);
+        }
+        
+        if (data[`${prefix}ZipCode`]) {
+            parts.push(data[`${prefix}ZipCode`]);
+        }
         
         return parts.join(', ') || '-';
     }
 
-    decodeLocation(code) {
-        // In a real application, this would decode location codes to names
-        // For now, return the code as is
+    async decodeLocation(code, type = 'province', parentCode = null) {
+        if (!code) return null;
+        
+        // Check cache first
+        const cacheKey = `${type}_${code}`;
+        if (this.locationCache.has(cacheKey)) {
+            return this.locationCache.get(cacheKey);
+        }
+
+        try {
+            let url = '';
+            let response;
+            let data;
+
+            switch (type) {
+                case 'province':
+                    url = 'https://psgc.gitlab.io/api/provinces/';
+                    response = await fetch(url);
+                    data = await response.json();
+                    const province = data.find(p => p.code === code);
+                    if (province) {
+                        const name = province.name.toUpperCase();
+                        this.locationCache.set(cacheKey, name);
+                        return name;
+                    }
+                    break;
+
+                case 'city':
+                    if (parentCode) {
+                        url = `https://psgc.gitlab.io/api/provinces/${parentCode}/cities-municipalities/`;
+                        response = await fetch(url);
+                        data = await response.json();
+                        const city = data.find(c => c.code === code);
+                        if (city) {
+                            const name = city.name.toUpperCase();
+                            this.locationCache.set(cacheKey, name);
+                            return name;
+                        }
+                    } else {
+                        // Try to get all cities/municipalities if no parent code
+                        url = 'https://psgc.gitlab.io/api/cities-municipalities/';
+                        response = await fetch(url);
+                        data = await response.json();
+                        const city = data.find(c => c.code === code);
+                        if (city) {
+                            const name = city.name.toUpperCase();
+                            this.locationCache.set(cacheKey, name);
+                            return name;
+                        }
+                    }
+                    break;
+
+                case 'barangay':
+                    if (parentCode) {
+                        url = `https://psgc.gitlab.io/api/cities-municipalities/${parentCode}/barangays/`;
+                        response = await fetch(url);
+                        data = await response.json();
+                        const barangay = data.find(b => b.code === code);
+                        if (barangay) {
+                            const name = barangay.name.toUpperCase();
+                            this.locationCache.set(cacheKey, name);
+                            return name;
+                        }
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error decoding location ${code}:`, error);
+        }
+
+        // If decoding fails, return the code itself
         return code;
     }
 
@@ -452,6 +561,18 @@ class ApplicationReview {
                     0% { transform: scale(1); }
                     50% { transform: scale(1.05); }
                     100% { transform: scale(1); }
+                }
+                .loading {
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    border: 3px solid var(--border);
+                    border-radius: 50%;
+                    border-top-color: var(--primary);
+                    animation: spin 0.8s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
             `;
             document.head.appendChild(style);
