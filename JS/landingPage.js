@@ -176,6 +176,26 @@
             });
         }
 
+        // Event listener for footer Enroll Now
+        const footerEnrollBtn = document.getElementById('footerEnrollBtn');
+        if (footerEnrollBtn) {
+            footerEnrollBtn.addEventListener('click', (e) => {
+                e.preventDefault(); // stop jumping to "#"
+
+                if (!currentUser) {
+                    // Not logged in → go to signup
+                    window.location.href = './login.html?mode=signup';
+                } else if (currentUser && !currentUser.emailVerified) {
+                    // Logged in but not verified
+                    showError('Please verify your email before starting the application.');
+                } else {
+                    // Logged in & verified → go to application form
+                    window.location.href = './applicationform.html';
+                }
+            });
+        }
+
+
         if (loginBtn) {
             loginBtn.addEventListener('click', () => {
                 window.location.href = './login.html?mode=login';
