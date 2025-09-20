@@ -160,8 +160,6 @@ class ApplicationReview {
                 data[`${prefix}Municipality`]
             );
             if (barangayName) {
-                // Remove redundant "Barangay" prefix - just use the name as returned by API
-                // The API already includes "BARANGAY" in names like "BARANGAY I (POB.)"
                 parts.push(barangayName);
             }
         }
@@ -226,7 +224,6 @@ class ApplicationReview {
                             return name;
                         }
                     } else {
-                        // Try to get all cities/municipalities if no parent code
                         url = 'https://psgc.gitlab.io/api/cities-municipalities/';
                         response = await fetch(url);
                         data = await response.json();
@@ -306,7 +303,8 @@ class ApplicationReview {
             this.setFieldValue('reviewFatherContact', data.fatherContact || 'Not Provided');
             this.setFieldValue('reviewFatherEmail', data.fatherEmail || 'Not Provided');
         } else {
-            document.getElementById('fatherSection').style.display = 'none';
+            const fatherSection = document.getElementById('fatherSection');
+            if (fatherSection) fatherSection.style.display = 'none';
         }
 
         // Mother's Information
@@ -316,7 +314,8 @@ class ApplicationReview {
             this.setFieldValue('reviewMotherContact', data.motherContact || 'Not Provided');
             this.setFieldValue('reviewMotherEmail', data.motherEmail || 'Not Provided');
         } else {
-            document.getElementById('motherSection').style.display = 'none';
+            const motherSection = document.getElementById('motherSection');
+            if (motherSection) motherSection.style.display = 'none';
         }
 
         // Guardian Information
@@ -343,7 +342,7 @@ class ApplicationReview {
         const documents = [
             { id: 'docBirthCert', key: 'birthCert', name: 'Birth Certificate' },
             { id: 'docReportCard', key: 'reportCard', name: 'Report Card' },
-            { id: 'docIdPhoto', key: 'idPhoto', name: 'ID Photo' },
+            { id: 'docIdPhoto', key: 'idPhoto', name: '2x2 Photo of Student' },
             { id: 'docMoralCert', key: 'moralCert', name: 'Good Moral' }
         ];
 
@@ -488,16 +487,8 @@ class ApplicationReview {
         // Save to sessionStorage (in production, this would be sent to a server)
         sessionStorage.setItem('submittedApplication', JSON.stringify(submission));
         
-        // Clear form data
-        sessionStorage.removeItem('applicationFormData');
-        sessionStorage.removeItem('documentUploadStatus');
-        sessionStorage.removeItem('applicationFormCompleted');
-        sessionStorage.removeItem('documentsUploaded');
-        
-        // Clear individual document data
-        ['birth-cert', 'report-card', 'id-photo', 'moral-cert'].forEach(doc => {
-            sessionStorage.removeItem(`document_${doc}`);
-        });
+        // Don't clear form data immediately - clear after redirect
+        // This allows the dashboard to load the data first
     }
 
     showSuccessModal(refNumber) {
@@ -514,6 +505,12 @@ class ApplicationReview {
 
         // Add confetti effect
         this.createConfetti();
+        
+        // Auto-redirect to dashboard after 3 seconds
+        // FIX: Change to the correct dashboard file name
+        setTimeout(() => {
+            window.location.href = 'studentDashboard.html'; // Updated from 'studentDashboard.html'
+        }, 3000);
     }
 
     createConfetti() {
@@ -577,6 +574,19 @@ class ApplicationReview {
             `;
             document.head.appendChild(style);
         }
+    }
+    
+    // Function to clear application data after successful redirect
+    static clearApplicationData() {
+        sessionStorage.removeItem('applicationFormData');
+        sessionStorage.removeItem('documentUploadStatus');
+        sessionStorage.removeItem('applicationFormCompleted');
+        sessionStorage.removeItem('documentsUploaded');
+        
+        // Clear individual document data
+        ['birth-cert', 'report-card', 'id-photo', 'moral-cert'].forEach(doc => {
+            sessionStorage.removeItem(`document_${doc}`);
+        });
     }
 }
 

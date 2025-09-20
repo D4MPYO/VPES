@@ -20,7 +20,7 @@
                     <span class="btn-icon">←</span>
                     <span class="btn-text">Previous Step</span>
                 </a>
-                <a href="./index.html" class="header-btn btn-dashboard">
+                <a href="./studentDashboard.html" class="header-btn btn-dashboard">
                     <span class="btn-icon">🏠</span>
                     <span class="btn-text">Dashboard</span>
                 </a>
@@ -331,7 +331,7 @@
                     </div>
                     <div class="document-item" id="docIdPhoto">
                         <span class="doc-icon">📸</span>
-                        <span class="doc-name">ID Photo (2x2)</span>
+                        <span class="doc-name">2x2 Photo of the Student</span>
                         <span class="doc-status" data-status="pending">Not Uploaded</span>
                     </div>
                     <div class="document-item" id="docMoralCert">
@@ -377,7 +377,7 @@
         </div>
     </div>
 
-    <!-- Success Modal -->
+    <!-- Success Modal Section - Replace the existing modal in review.html -->
     <div class="modal" id="successModal">
         <div class="modal-content success-modal">
             <div class="success-icon">🎉</div>
@@ -392,7 +392,8 @@
                 You will receive an email confirmation shortly.
             </p>
             <div class="modal-actions">
-                <button class="button button-primary" onclick="window.location.href='index.html';">
+                <!-- FIX: Updated to redirect to the correct dashboard file -->
+                <button class="button button-primary" onclick="window.location.href='studentDashboard.html';">
                     Go to Dashboard
                 </button>
                 <button class="button button-secondary" onclick="window.print();">

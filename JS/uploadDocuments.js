@@ -1,12 +1,15 @@
 /**
  * Document Upload Management System
  * Handles file uploads, validation, preview, and storage
+ * Enhanced with improved alert system and better user feedback
  */
+
 class DocumentUploader {
     constructor() {
         this.uploadedFiles = new Map();
         this.fileURLs = new Map();
         this.maxFileSize = 5 * 1024 * 1024; // 5MB
+        this.alertQueue = []; // Track active alerts
         this.init();
     }
 
@@ -111,7 +114,7 @@ class DocumentUploader {
                 this.saveDocumentStatus();
                 
                 if (this.proceedWithMissingDocuments()) {
-                    window.location.href = 'review.html';
+                    // Navigation handled in proceedWithMissingDocuments
                 }
             });
         }
@@ -225,7 +228,7 @@ class DocumentUploader {
         const allowed = allowedTypes[target] || allowedTypes['birth-cert'];
         if (!allowed.includes(file.type)) {
             if (target === 'id-photo') {
-                this.showAlert('ID Photo must be JPG or PNG format only', 'error');
+                this.showAlert('Student Photo must be JPG or PNG format only', 'error');
             } else {
                 this.showAlert('Only PDF, JPG, and PNG files are allowed', 'error');
             }
@@ -265,47 +268,109 @@ class DocumentUploader {
         });
     }
 
-    // UI Updates
-    showAlert(message, type = 'info') {
-        let alertEl = document.querySelector('.upload-alert');
-        if (!alertEl) {
-            alertEl = document.createElement('div');
-            alertEl.className = 'upload-alert alert';
-            const container = document.querySelector('.container');
-            const firstCard = container.querySelector('.form-card');
-            container.insertBefore(alertEl, firstCard);
-        }
-
-        const typeMap = {
-            'error': 'danger',
-            'warning': 'warning',
-            'success': 'success',
-            'info': 'info'
+    // Enhanced Alert System
+    showAlert(message, type = 'info', options = {}) {
+        const defaultOptions = {
+            duration: type === 'warning' ? 12000 : 8000, // Longer durations
+            persistent: false, // Whether alert stays until manually dismissed
+            showDismissButton: type === 'warning' || type === 'error', // Add dismiss button for important alerts
+            position: 'top' // Can be 'top' or 'floating'
         };
-
-        alertEl.className = `upload-alert alert alert-${typeMap[type] || 'info'}`;
+        
+        const settings = { ...defaultOptions, ...options };
+        
+        // Create or get alert container
+        let alertContainer = document.querySelector('.alert-container');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.className = 'alert-container';
+            const container = document.querySelector('.container');
+            container.insertBefore(alertContainer, container.firstChild);
+        }
+        
+        // Create alert element
+        const alertEl = document.createElement('div');
+        alertEl.className = `upload-alert alert alert-${this.getAlertClass(type)}`;
+        alertEl.style.animation = 'slideDown 0.3s ease, pulse 2s ease infinite';
         
         const icons = {
             'error': '⚠️',
-            'warning': '⚠️',
+            'warning': '⚠️', 
             'success': '✅',
             'info': 'ℹ️'
         };
         
         alertEl.innerHTML = `
             <span class="alert-icon">${icons[type] || 'ℹ️'}</span>
-            <div>${message}</div>
+            <div class="alert-content">${message}</div>
+            ${settings.showDismissButton ? '<button class="alert-dismiss">✕</button>' : ''}
         `;
-
-        // Auto-remove after timeout
-        const timeout = type === 'warning' ? 8000 : 5000;
+        
+        // Add to container
+        alertContainer.appendChild(alertEl);
+        
+        // Add dismiss button functionality
+        if (settings.showDismissButton) {
+            alertEl.querySelector('.alert-dismiss').addEventListener('click', () => {
+                this.dismissAlert(alertEl);
+            });
+        }
+        
+        // Auto-remove if not persistent
+        if (!settings.persistent) {
+            const timeoutId = setTimeout(() => {
+                this.dismissAlert(alertEl);
+            }, settings.duration);
+            
+            // Store timeout ID for potential cancellation
+            alertEl.dataset.timeoutId = timeoutId;
+        }
+        
+        // Track alert
+        this.alertQueue.push(alertEl);
+        
+        // Limit number of visible alerts
+        if (this.alertQueue.length > 3) {
+            const oldAlert = this.alertQueue.shift();
+            this.dismissAlert(oldAlert);
+        }
+        
+        return alertEl;
+    }
+    
+    dismissAlert(alertEl) {
+        if (!alertEl) return;
+        
+        // Clear timeout if exists
+        if (alertEl.dataset.timeoutId) {
+            clearTimeout(alertEl.dataset.timeoutId);
+        }
+        
+        // Animate out
+        alertEl.style.animation = 'slideUp 0.3s ease';
         setTimeout(() => {
-            if (alertEl && alertEl.parentNode) {
-                alertEl.remove();
+            if (alertEl.parentNode) {
+                alertEl.parentNode.removeChild(alertEl);
             }
-        }, timeout);
+            // Remove from queue
+            const index = this.alertQueue.indexOf(alertEl);
+            if (index > -1) {
+                this.alertQueue.splice(index, 1);
+            }
+        }, 300);
+    }
+    
+    getAlertClass(type) {
+        const typeMap = {
+            'error': 'danger',
+            'warning': 'warning',
+            'success': 'success',
+            'info': 'info'
+        };
+        return typeMap[type] || 'info';
     }
 
+    // UI Updates
     showLoading(target) {
         const loadingEl = document.querySelector(`[data-loading="${target}"]`);
         const uploadArea = document.querySelector(`[data-upload="${target}"]`);
@@ -435,7 +500,7 @@ class DocumentUploader {
         const titles = {
             'birth-cert': '📄 Birth Certificate',
             'report-card': '📊 Report Card / Form 138',
-            'id-photo': '📸 ID Photo (2x2)',
+            'id-photo': '📸 2x2 Photo of the Student (recent)',
             'moral-cert': '🏆 Certificate of Good Moral Character'
         };
         
@@ -593,7 +658,7 @@ class DocumentUploader {
         // Store which documents still need to be submitted
         const pendingDocuments = [];
         if (!status.birthCert) pendingDocuments.push('Birth Certificate');
-        if (!status.idPhoto) pendingDocuments.push('ID Photo (2x2)');
+        if (!status.idPhoto) pendingDocuments.push('2x2 Photo of the Student');
         
         status.pendingDocuments = pendingDocuments;
         status.hasAllRequired = pendingDocuments.length === 0;
@@ -611,7 +676,7 @@ class DocumentUploader {
         const documents = [
             { key: 'birth-cert', name: 'Birth Certificate' },
             { key: 'report-card', name: 'Report Card' },
-            { key: 'id-photo', name: 'ID Photo' },
+            { key: 'id-photo', name: 'Photo of the Student' },
             { key: 'moral-cert', name: 'Good Moral Certificate' }
         ];
 
@@ -659,119 +724,461 @@ class DocumentUploader {
         }
     }
 
+    // Enhanced Missing Documents Modal
     proceedWithMissingDocuments() {
         const status = this.getUploadStatus();
         const missingDocs = [];
         
         // Check which important documents are missing
         if (!status.birthCert) missingDocs.push('Birth Certificate');
-        if (!status.idPhoto) missingDocs.push('ID Photo');
+        if (!status.idPhoto) missingDocs.push('Photo of Student');
+        
+        // Check if user chose to skip warnings today
+        const skipWarning = sessionStorage.getItem('skipDocumentWarning');
+        const skipDate = sessionStorage.getItem('skipDocumentWarningDate');
+        const today = new Date().toDateString();
         
         if (missingDocs.length > 0) {
-            // Create a custom confirmation modal instead of using confirm()
+            // Skip warning if user requested and it's the same day
+            if (skipWarning === 'true' && skipDate === today) {
+                this.showAlert(
+                    '📋 Proceeding with incomplete documents as per your preference.',
+                    'info',
+                    { duration: 5000 }
+                );
+                setTimeout(() => {
+                    window.location.href = 'review.html';
+                }, 1000);
+                return true;
+            }
+            
+            // Otherwise show the enhanced modal
             return this.showMissingDocumentsModal(missingDocs);
         }
         
+        // All documents uploaded
+        this.showAlert('✅ All documents uploaded successfully!', 'success');
+        setTimeout(() => {
+            window.location.href = 'review.html';
+        }, 1000);
         return true;
     }
 
     showMissingDocumentsModal(missingDocs) {
-        // Create modal element
+        // First show a warning alert that auto-dismisses after 10 seconds
+        this.showAlert(
+            `⚠️ You have ${missingDocs.length} missing required document(s). Please review before proceeding.`,
+            'warning',
+            { duration: 10000, showDismissButton: true }  // Changed from persistent: true to duration: 10000
+        );
+        
+        // Create enhanced modal
         const modal = document.createElement('div');
         modal.className = 'custom-confirm-modal';
         modal.innerHTML = `
-            <div class="confirm-modal-content">
-                <div class="confirm-modal-header">
-                    <h3>⚠️ Missing Documents</h3>
+            <div class="confirm-modal-content enhanced">
+                <div class="confirm-modal-header warning-header">
+                    <div class="header-icon-pulse">⚠️</div>
+                    <h3>Missing Required Documents</h3>
                 </div>
                 <div class="confirm-modal-body">
-                    <p>You haven't uploaded the following required document(s):</p>
-                    <ul class="missing-docs-list">
-                        ${missingDocs.map(doc => `<li>• ${doc}</li>`).join('')}
+                    <div class="warning-banner">
+                        <strong>Important:</strong> The following required documents have not been uploaded:
+                    </div>
+                    <ul class="missing-docs-list enhanced">
+                        ${missingDocs.map(doc => `
+                            <li class="missing-doc-item">
+                                <span class="doc-icon">📄</span>
+                                <span class="doc-name">${doc}</span>
+                                <span class="doc-status">Required</span>
+                            </li>
+                        `).join('')}
                     </ul>
-                    <p class="confirm-note">
-                        <strong>Note:</strong> You can still proceed with your application, 
-                        but these documents must be submitted within <strong>30 days after enrollment</strong>.
-                    </p>
+                    <div class="confirm-note enhanced">
+                        <div class="note-icon">📅</div>
+                            <div class="note-content" style="text-align: justify;">
+                                <strong>Deadline Reminder:</strong><br>
+                                You may proceed with your application now; however, the required documents 
+                                <strong>MUST be submitted within 30 days after enrollment.</strong>
+                                If not submitted within the given timeframe, your child’s status will remain as 
+                                <strong>Temporarily Enrolled</strong> until all requirements are completed.
+                            </div>
+                        </div>
+                    <div class="action-options">
+                        <label class="remember-choice">
+                            <input type="checkbox" id="dontShowAgain">
+                            <span>Don't show this warning again today</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="confirm-modal-footer">
-                    <button class="confirm-btn-cancel">Cancel</button>
-                    <button class="confirm-btn-proceed">Proceed Anyway</button>
+                    <button class="confirm-btn-back">
+                        <span>←</span> Go Back & Upload
+                    </button>
+                    <button class="confirm-btn-proceed">
+                        Proceed Without Documents <span>→</span>
+                    </button>
                 </div>
             </div>
         `;
 
-        // Add modal styles
-        this.addModalStyles();
+        // Enhanced modal styles
+        this.addEnhancedModalStyles();
         
-        // Add to body
+        // Add to body with fade-in effect
         document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
 
         // Return promise for user's choice
         return new Promise((resolve) => {
-            modal.querySelector('.confirm-btn-cancel').addEventListener('click', () => {
-                modal.remove();
-                resolve(false);
+            const proceedBtn = modal.querySelector('.confirm-btn-proceed');
+            const backBtn = modal.querySelector('.confirm-btn-back');
+            const dontShowCheckbox = modal.querySelector('#dontShowAgain');
+            
+            // Proceed button - with countdown
+            let countdown = 3;
+            proceedBtn.disabled = true;
+            proceedBtn.innerHTML = `Please wait (${countdown})...`;
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    proceedBtn.innerHTML = `Please wait (${countdown})...`;
+                } else {
+                    clearInterval(countdownInterval);
+                    proceedBtn.disabled = false;
+                    proceedBtn.innerHTML = 'Proceed Without Documents <span>→</span>';
+                }
+            }, 1000);
+            
+            proceedBtn.addEventListener('click', () => {
+                if (dontShowCheckbox.checked) {
+                    sessionStorage.setItem('skipDocumentWarning', 'true');
+                    sessionStorage.setItem('skipDocumentWarningDate', new Date().toDateString());
+                }
+                clearInterval(countdownInterval);
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.remove();
+                    resolve(true);
+                }, 300);
             });
 
-            modal.querySelector('.confirm-btn-proceed').addEventListener('click', () => {
-                modal.remove();
-                resolve(true);
-            });
-
-            // Close on backdrop click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
+            backBtn.addEventListener('click', () => {
+                clearInterval(countdownInterval);
+                modal.classList.remove('show');
+                
+                // Scroll to first missing document
+                const firstMissing = missingDocs[0];
+                const targetSection = this.getDocumentSection(firstMissing);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the section
+                    targetSection.classList.add('highlight-missing');
+                    setTimeout(() => targetSection.classList.remove('highlight-missing'), 3000);
+                }
+                
+                setTimeout(() => {
                     modal.remove();
                     resolve(false);
+                }, 300);
+            });
+
+            // Close on backdrop click (but not immediately)
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal && !proceedBtn.disabled) {
+                    clearInterval(countdownInterval);
+                    modal.classList.remove('show');
+                    setTimeout(() => {
+                        modal.remove();
+                        resolve(false);
+                    }, 300);
                 }
             });
+            
+            // ESC key to close
+            const escHandler = (e) => {
+                if (e.key === 'Escape' && !proceedBtn.disabled) {
+                    clearInterval(countdownInterval);
+                    modal.classList.remove('show');
+                    setTimeout(() => {
+                        modal.remove();
+                        document.removeEventListener('keydown', escHandler);
+                        resolve(false);
+                    }, 300);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
         }).then(result => {
             if (result) {
-                window.location.href = 'review.html';
+                // Show final warning before proceeding
+                this.showAlert(
+                    '📋 Proceeding with incomplete documents. Remember to submit them within 30 days!',
+                    'warning',
+                    { duration: 15000, showDismissButton: true }
+                );
+                setTimeout(() => {
+                    window.location.href = 'review.html';
+                }, 1000);
             }
             return result;
         });
     }
+    
+    getDocumentSection(docName) {
+        const sectionMap = {
+            'Birth Certificate': 'birth-cert',
+            'Photo of Student': 'id-photo',
+            'Report Card': 'report-card',
+            'Good Moral Certificate': 'moral-cert'
+        };
+        const target = sectionMap[docName];
+        return target ? document.querySelector(`[data-upload="${target}"]`)?.closest('.form-card') : null;
+    }
 
-    addModalStyles() {
-        if (document.getElementById('confirm-modal-styles')) return;
+    getUploadStatus() {
+        return {
+            birthCert: this.hasDocument('birth-cert'),
+            reportCard: this.hasDocument('report-card'),
+            idPhoto: this.hasDocument('id-photo'),
+            moralCert: this.hasDocument('moral-cert')
+        };
+    }
+
+    addEnhancedModalStyles() {
+        if (document.getElementById('enhanced-modal-styles')) return;
 
         const style = document.createElement('style');
-        style.id = 'confirm-modal-styles';
+        style.id = 'enhanced-modal-styles';
         style.textContent = `
+            /* Alert Container */
+            .alert-container {
+                position: fixed;
+                top: 70px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1500;
+                width: 90%;
+                max-width: 600px;
+                pointer-events: none;
+            }
+            
+            .alert-container .upload-alert {
+                pointer-events: auto;
+                margin-bottom: 10px;
+                position: relative;
+                padding-right: 40px;
+            }
+            
+            .alert-content {
+                flex: 1;
+            }
+            
+            .alert-dismiss {
+                position: absolute;
+                right: 15px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: inherit;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 5px 10px;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+            }
+            
+            .alert-dismiss:hover {
+                opacity: 1;
+            }
+
+            /* Enhanced Modal */
             .custom-confirm-modal {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.7);
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 z-index: 9999;
-                animation: fadeIn 0.2s ease;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .custom-confirm-modal.show {
+                opacity: 1;
             }
 
-            .confirm-modal-content {
+            .confirm-modal-content.enhanced {
                 background: white;
-                border-radius: 12px;
-                max-width: 450px;
-                width: 90%;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-                animation: slideUp 0.3s ease;
+                border-radius: 16px;
+                max-width: 520px;
+                width: 95%;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                transform: scale(0.9);
+                transition: transform 0.3s ease;
+            }
+            
+            .custom-confirm-modal.show .confirm-modal-content {
+                transform: scale(1);
             }
 
-            .confirm-modal-header {
-                padding: 20px;
-                border-bottom: 1px solid #e5e7eb;
+            .warning-header {
+                background: linear-gradient(135deg, #fef3c7, #fed7aa);
+                padding: 24px;
+                border-radius: 16px 16px 0 0;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .header-icon-pulse {
+                font-size: 1.5rem;
+                animation: pulse 2s ease infinite;
             }
 
-            .confirm-modal-header h3 {
-                margin: 0;
-                color: #111827;
-                font-size: 1.3rem;
+            .warning-banner {
+                background: #fee2e2;
+                border: 1px solid #fca5a5;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 16px;
+                color: #991b1b;
+            }
+
+            .missing-docs-list.enhanced {
+                list-style: none;
+                padding: 0;
+                margin: 16px 0;
+            }
+
+            .missing-doc-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px;
+                background: #fff7ed;
+                border: 1px solid #fed7aa;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                transition: all 0.2s;
+            }
+            
+            .missing-doc-item:hover {
+                transform: translateX(5px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .doc-icon {
+                font-size: 1.2rem;
+            }
+
+            .doc-name {
+                flex: 1;
+                font-weight: 500;
+                color: #7c2d12;
+            }
+
+            .doc-status {
+                background: #dc2626;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            .confirm-note.enhanced {
+                background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+                border: 2px solid #60a5fa;
+                border-radius: 10px;
+                padding: 16px;
+                display: flex;
+                gap: 12px;
+                margin-top: 16px;
+            }
+
+            .note-icon {
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+
+            .note-content {
+                flex: 1;
+                line-height: 1.6;
+                color: #1e3a8a;
+            }
+
+            .action-options {
+                margin-top: 16px;
+                padding-top: 16px;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            .remember-choice {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                color: #6b7280;
+                font-size: 0.9rem;
+            }
+            
+            .remember-choice input {
+                cursor: pointer;
+            }
+
+            .confirm-btn-back {
+                background: #10b981;
+                color: white;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 20px;
+                border-radius: 6px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .confirm-btn-back:hover {
+                background: #059669;
+                transform: translateY(-1px);
+            }
+            
+            .confirm-btn-proceed {
+                background: #4f46e5;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 6px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .confirm-btn-proceed:hover:not(:disabled) {
+                background: #3730a3;
+                transform: translateY(-1px);
+            }
+            
+            .confirm-btn-proceed:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+
+            .confirm-modal-footer {
+                padding: 15px 20px;
+                border-top: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
             }
 
             .confirm-modal-body {
@@ -784,93 +1191,58 @@ class DocumentUploader {
                 line-height: 1.6;
             }
 
-            .missing-docs-list {
-                list-style: none;
-                padding: 0;
-                margin: 15px 0;
-                background: #fef3c7;
-                border: 1px solid #fcd34d;
-                border-radius: 8px;
-                padding: 12px 15px;
+            .confirm-modal-header h3 {
+                margin: 0;
+                color: #111827;
+                font-size: 1.3rem;
             }
 
-            .missing-docs-list li {
-                color: #92400e;
-                padding: 4px 0;
-                font-weight: 500;
+            /* Highlight missing section */
+            .form-card.highlight-missing {
+                animation: highlightPulse 3s ease;
+                box-shadow: 0 0 0 3px #ef4444;
             }
 
-            .confirm-note {
-                background: #dbeafe;
-                border: 1px solid #93c5fd;
-                border-radius: 8px;
-                padding: 12px;
-                margin-top: 15px !important;
-                font-size: 0.9rem;
+            /* Animations */
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
             }
-
-            .confirm-modal-footer {
-                padding: 15px 20px;
-                border-top: 1px solid #e5e7eb;
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-            }
-
-            .confirm-modal-footer button {
-                padding: 8px 20px;
-                border-radius: 6px;
-                border: none;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-
-            .confirm-btn-cancel {
-                background: #f3f4f6;
-                color: #6b7280;
-            }
-
-            .confirm-btn-cancel:hover {
-                background: #e5e7eb;
-            }
-
-            .confirm-btn-proceed {
-                background: #4f46e5;
-                color: white;
-            }
-
-            .confirm-btn-proceed:hover {
-                background: #3730a3;
-                transform: translateY(-1px);
-            }
-
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-
-            @keyframes slideUp {
+            
+            @keyframes slideDown {
                 from { 
                     opacity: 0;
-                    transform: translateY(20px);
+                    transform: translateY(-20px);
                 }
                 to { 
                     opacity: 1;
                     transform: translateY(0);
                 }
             }
+            
+            @keyframes slideUp {
+                from { 
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to { 
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+            }
+            
+            @keyframes highlightPulse {
+                0%, 100% { box-shadow: 0 0 0 0 transparent; }
+                25%, 75% { box-shadow: 0 0 0 3px #ef4444; }
+                50% { box-shadow: 0 0 20px 3px #ef4444; }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
         `;
         document.head.appendChild(style);
-    }
-
-    getUploadStatus() {
-        return {
-            birthCert: this.hasDocument('birth-cert'),
-            reportCard: this.hasDocument('report-card'),
-            idPhoto: this.hasDocument('id-photo'),
-            moralCert: this.hasDocument('moral-cert')
-        };
     }
 }
 

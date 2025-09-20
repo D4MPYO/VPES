@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPES SIMS - Student Dashboard</title>
+    <link rel="stylesheet" href="CSS/studentDashboard.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-container">
+            <div class="header-left">
+                <div class="logo-section">
+                    <img src="Images/logo.png" alt="VPES Logo" class="logo-img">
+                    <span class="logo-text">VPES SIMS</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <span class="welcome-text">Welcome, <span id="studentName">Loading...</span></span>
+            </div>
+            
+            <div class="header-right">
+                <button class="header-btn profile-btn" id="profileBtn">
+                    <span>👤</span> Profile
+                </button>
+                <button class="header-btn logout-btn" id="logoutBtn">
+                    <span>🚪</span> Logout
+                </button>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+    </header>
+
+    <!-- Main Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>📋 Menu</h3>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="application">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-text">My Application</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="documents">
+                    <span class="nav-icon">📁</span>
+                    <span class="nav-text">Documents</span>
+                </a>
+                
+                <a href="#" class="nav-item" data-section="status">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Status</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="content-section active">
+                <!-- Application Overview Card -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <span class="title-icon">📊</span>
+                            Application Overview
+                        </h2>
+                        <span class="status-badge" id="statusBadge">UNDER REVIEW</span>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Application Details -->
+                        <div class="details-section">
+                            <h3 class="section-title">
+                                <span>📄</span> Application Details
+                            </h3>
+                            
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Application ID:</span>
+                                    <span class="detail-value" id="applicationId">VPES-2025-001</span>
+                                </div>
+                                
+                                <div class="detail-item">
+                                    <span class="detail-label">Grade Level:</span>
+                                    <span class="detail-value" id="gradeLevel">Grade 1</span>
+                                </div>
+                                
+                                <div class="detail-item">
+                                    <span class="detail-label">Date Applied:</span>
+                                    <span class="detail-value" id="dateApplied">January 15, 2025</span>
+                                </div>
+                                
+                                <div class="detail-item">
+                                    <span class="detail-label">Current Status:</span>
+                                    <span class="detail-value status-text" id="currentStatus">Under Review</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Document Status -->
+                        <div class="document-status-section">
+                            <h3 class="section-title">
+                                <span>📁</span> Document Status
+                            </h3>
+                            
+                            <div class="documents-container">
+                                <div class="documents-header">Required Documents</div>
+                                
+                                <div class="document-list">
+                                    <div class="document-item">
+                                        <span class="doc-name">Birth Certificate</span>
+                                        <span class="doc-status verified" id="docBirthCert">
+                                            <span>✓</span> VERIFIED
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="document-item">
+                                        <span class="doc-name">Report Card</span>
+                                        <span class="doc-status pending" id="docReportCard">
+                                            <span>⏱</span> PENDING
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="document-item">
+                                        <span class="doc-name">2x2 Photo of Student</span>
+                                        <span class="doc-status verified" id="docIdPhoto">
+                                            <span>✓</span> VERIFIED
+                                        </span>
+                                    </div>
+
+                                    <div class="document-item">
+                                        <span class="doc-name">Good Moral Certificate</span>
+                                        <span class="doc-status not-uploaded" id="docMoralCert">
+                                            <span>📤</span> NOT UPLOADED
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Update Alert -->
+                        <div class="update-alert" id="updateAlert">
+                            <span class="alert-icon">📢</span>
+                            <span class="alert-text">
+                                <strong>Update:</strong> Your application is currently being reviewed. Please ensure all documents are uploaded.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Card -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <span class="title-icon">⚡</span>
+                            Quick Actions
+                        </h2>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="quick-actions-grid">
+                            <button class="action-btn" onclick="window.location.href='uploadDocument.html'">
+                                <span class="action-icon">📤</span>
+                                <span class="action-text">Upload Documents</span>
+                            </button>
+                            
+                            <button class="action-btn" onclick="window.location.href='applicationform.html'">
+                                <span class="action-icon">✏️</span>
+                                <span class="action-text">Edit Application</span>
+                            </button>
+                            
+                            <button class="action-btn" onclick="window.print()">
+                                <span class="action-icon">🖨️</span>
+                                <span class="action-text">Print Application</span>
+                            </button>
+                            
+                            <button class="action-btn" id="viewTimelineBtn">
+                                <span class="action-icon">📅</span>
+                                <span class="action-text">View Timeline</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- My Application Section -->
+            <section id="applicationSection" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <span class="title-icon">📝</span>
+                            My Application Details
+                        </h2>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="application-info">
+                            <!-- Student Information will be loaded here -->
+                            <div id="studentInfoContainer">
+                                <p class="loading-text">Loading application details...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Documents Section -->
+            <section id="documentsSection" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <span class="title-icon">📁</span>
+                            Document Management
+                        </h2>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div id="documentListContainer">
+                            <!-- Document list will be loaded here -->
+                            <p class="loading-text">Loading documents...</p>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="btn-primary" onclick="window.location.href='uploadDocument.html'">
+                                <span>📤</span> Upload New Document
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Section -->
+            <section id="statusSection" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <span class="title-icon">📊</span>
+                            Application Status Timeline
+                        </h2>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item completed">
+                                <div class="timeline-marker">✓</div>
+                                <div class="timeline-content">
+                                    <h4>Application Submitted</h4>
+                                    <p class="timeline-date" id="submittedDate">January 15, 2025</p>
+                                    <p class="timeline-desc">Your application has been successfully submitted.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item active">
+                                <div class="timeline-marker">⏱</div>
+                                <div class="timeline-content">
+                                    <h4>Under Review</h4>
+                                    <p class="timeline-date">Current Status</p>
+                                    <p class="timeline-desc">Your application is being reviewed by our admissions team.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item">
+                                <div class="timeline-marker">📋</div>
+                                <div class="timeline-content">
+                                    <h4>Document Verification</h4>
+                                    <p class="timeline-date">Pending</p>
+                                    <p class="timeline-desc">All submitted documents will be verified.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="timeline-item">
+                                <div class="timeline-marker">📧</div>
+                                <div class="timeline-content">
+                                    <h4>Final Decision</h4>
+                                    <p class="timeline-date">Pending</p>
+                                    <p class="timeline-desc">You will receive the admission decision via email.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module" src="JS/studentDashboard.js"></script>
+</body>
+</html>

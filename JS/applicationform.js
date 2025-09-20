@@ -214,12 +214,27 @@ class FormValidator {
                 }
             }
 
-            // Age validation
+            // Age validation - now checks against calculated age from birthdate
             if (field.id === 'age') {
                 const age = parseInt(field.value);
-                if (age < 3 || age > 25) {
+                const birthdateInput = document.getElementById('birthDate');
+                
+                if (isNaN(age)) {
+                    isValid = false;
+                    errorMessage = 'Age must be a number';
+                } else if (age < 3 || age > 25) {
                     isValid = false;
                     errorMessage = 'Age must be between 3 and 25';
+                } else if (birthdateInput && birthdateInput.value) {
+                    // Validate against calculated age
+                    const calculatedAge = this.calculateAgeFromDate(birthdateInput.value);
+                    if (calculatedAge !== null && age !== calculatedAge) {
+                        // Auto-correct the age
+                        field.value = calculatedAge;
+                        isValid = true;
+                        errorMessage = '';
+                        this.showFieldInfo(field, `Age auto-corrected to ${calculatedAge} based on birthdate`);
+                    }
                 }
             }
 
@@ -242,6 +257,48 @@ class FormValidator {
         }
 
         return isValid;
+    }
+
+    calculateAgeFromDate(birthDateString) {
+        const birthDate = new Date(birthDateString);
+        if (isNaN(birthDate)) return null;
+        
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        return age >= 0 ? age : null;
+    }
+
+    showFieldInfo(field, message) {
+        // Show temporary info message
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'field-info-message';
+        infoDiv.style.cssText = `
+            position: absolute;
+            background: #10b981;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-top: 4px;
+            animation: fadeIn 0.3s ease;
+            z-index: 1000;
+        `;
+        infoDiv.textContent = message;
+        
+        const fieldContainer = field.parentElement;
+        fieldContainer.style.position = 'relative';
+        fieldContainer.appendChild(infoDiv);
+        
+        setTimeout(() => {
+            infoDiv.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => infoDiv.remove(), 300);
+        }, 3000);
     }
 
     isConditionallyRequired(field) {
@@ -634,6 +691,7 @@ class ApplicationFormController {
     init() {
         this.setupLocationSelectors();
         this.setupFormControls();
+        this.setupAgeValidation();
         this.setupValidator();
         this.setupAutoSave();
         this.restoreFormState();
@@ -690,7 +748,7 @@ class ApplicationFormController {
         }
 
         // Auto-uppercase text inputs
-        const textInputs = document.querySelectorAll('input[type="text"]:not([type="email"]):not(#lrn)');
+        const textInputs = document.querySelectorAll('input[type="text"]:not([type="email"]):not(#lrn):not(#age)');
         textInputs.forEach(input => {
             input.addEventListener('input', function() {
                 this.value = this.value.toUpperCase();
@@ -699,6 +757,121 @@ class ApplicationFormController {
 
         // Initialize conditional sections
         this.toggleReturningLearnerSection();
+    }
+
+    setupAgeValidation() {
+        const ageInput = document.getElementById('age');
+        const birthdateInput = document.getElementById('birthDate');
+        
+        if (ageInput) {
+            // Only allow numeric input for age field
+            ageInput.addEventListener('input', (e) => {
+                // Remove any non-numeric characters
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                
+                // Limit to 2 digits (reasonable age range)
+                if (e.target.value.length > 2) {
+                    e.target.value = e.target.value.slice(0, 2);
+                }
+            });
+
+            // Prevent non-numeric keys
+            ageInput.addEventListener('keypress', (e) => {
+                // Allow backspace, delete, tab, escape, enter
+                if ([8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                    // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                    (e.keyCode === 65 && e.ctrlKey === true) ||
+                    (e.keyCode === 67 && e.ctrlKey === true) ||
+                    (e.keyCode === 86 && e.ctrlKey === true) ||
+                    (e.keyCode === 88 && e.ctrlKey === true)) {
+                    return;
+                }
+                // Ensure that it is a number and stop the keypress
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
+            });
+
+            // Validate age against birthdate on blur
+            ageInput.addEventListener('blur', () => {
+                if (birthdateInput && birthdateInput.value && ageInput.value) {
+                    const calculatedAge = this.getCalculatedAge(birthdateInput.value);
+                    const inputAge = parseInt(ageInput.value);
+                    
+                    if (calculatedAge !== null && inputAge !== calculatedAge) {
+                        // Auto-correct the age
+                        ageInput.value = calculatedAge;
+                        
+                        // Show notification
+                        this.showAgeNotification(`Age has been corrected to ${calculatedAge} based on the birthdate`);
+                    }
+                }
+            });
+
+            // Prevent paste of non-numeric content
+            ageInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numericOnly = paste.replace(/[^0-9]/g, '').slice(0, 2);
+                ageInput.value = numericOnly;
+                
+                // Trigger validation
+                if (birthdateInput && birthdateInput.value) {
+                    ageInput.dispatchEvent(new Event('blur'));
+                }
+            });
+        }
+    }
+
+    getCalculatedAge(birthDateString) {
+        const birthDate = new Date(birthDateString);
+        if (isNaN(birthDate)) return null;
+        
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        return age >= 0 ? age : null;
+    }
+
+    showAgeNotification(message) {
+        // Remove existing age notifications
+        const existing = document.querySelector('.age-notification');
+        if (existing) existing.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'age-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #10b981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: scaleIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        `;
+        notification.innerHTML = `
+            <span style="font-size: 1.2rem;">✓</span>
+            <span>${message}</span>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 
     toggleLRNField() {
@@ -760,6 +933,35 @@ class ApplicationFormController {
             });
             
             conditionalRequired.forEach(asterisk => asterisk.classList.remove('show'));
+        }
+    }
+
+    calculateAge() {
+        const birthdateInput = document.getElementById('birthDate');
+        const ageInput = document.getElementById('age');
+        
+        if (!birthdateInput || !ageInput) return;
+
+        const birthDate = new Date(birthdateInput.value);
+        if (!isNaN(birthDate)) {
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            if (age >= 0) {
+                ageInput.value = age;
+                // Clear any error styling
+                ageInput.style.borderColor = '';
+                ageInput.classList.remove('error-highlight');
+            } else {
+                ageInput.value = '';
+            }
+        } else {
+            ageInput.value = '';
         }
     }
 
@@ -850,28 +1052,6 @@ class ApplicationFormController {
     async updatePermanentFromCurrent() {
         if (document.getElementById('sameAddress').checked) {
             await this.togglePermanentAddress();
-        }
-    }
-
-    calculateAge() {
-        const birthdateInput = document.getElementById('birthDate');
-        const ageInput = document.getElementById('age');
-        
-        if (!birthdateInput || !ageInput) return;
-
-        const birthDate = new Date(birthdateInput.value);
-        if (!isNaN(birthDate)) {
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-
-            ageInput.value = age >= 0 ? age : '';
-        } else {
-            ageInput.value = '';
         }
     }
 
@@ -1173,6 +1353,13 @@ document.addEventListener('DOMContentLoaded', () => {
             background: linear-gradient(90deg, var(--primary), var(--primary-light));
             width: 0%;
             transition: width 0.3s ease;
+        }
+        
+        /* Age input specific styling */
+        #age {
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
     `;
     document.head.appendChild(style);
